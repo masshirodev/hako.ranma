@@ -35,8 +35,10 @@ local function type_ok(value, want)
   return false
 end
 
--- A table that is one spec (rather than a list of them).
+-- A table that is one spec rather than a list of them. As in lazy.nvim, more
+-- than one positional item makes a list: { "a/b", { import = "plugins" } }.
 local function is_spec(t)
+  if #t > 1 then return false end
   return type(t[1]) == "string" or t.dir ~= nil or t.url ~= nil or t.import ~= nil or t.name ~= nil
 end
 

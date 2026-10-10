@@ -64,12 +64,14 @@ repo beta.ranma 'lua/beta.lua=return { ok = true }' \
   'plugin/beta.lua=assert(DEP_LOADED, "dep loads first") ranma.option("beta.ok", { type = "bool", default = (require("beta")).ok })'
 repo broken.ranma 'plugin/broken.lua=error("boom")'
 repo off.ranma 'plugin/off.lua=error("disabled: never loaded")'
+repo plain.ranma 'plugin/plain.lua=ranma.option("plain.n", { type = "int", default = 7 })'
 repo gamma.ranma 'plugin/gamma.lua=ranma.option("gamma.n", { type = "int", default = 3 })'
 
 mkdir -p "$CFG/lua/plugins" "$ROOT"
 cat > "$CFG/init.lua" <<EOF
 assert(ranma.packadd("$HAKO"))
 require("hako").setup({
+  "file://$SRC/plain.ranma",
   { "file://$SRC/alpha.ranma", opts = { n = 5 } },
   { "file://$SRC/beta.ranma", dependencies = { "file://$SRC/dep.ranma" } },
   { "file://$SRC/off.ranma", enabled = false },
@@ -89,6 +91,8 @@ until_lua 'local l = io.open("'"$CFG"'/hako-lock.json") and io.open("'"$CFG"'/ha
 ok "missing plugins installed, locked, reloaded"
 [ "$(RL 'return ranma.get("alpha.n")')" = "5" ] || fail "opts applied: alpha.n is $(RL 'return ranma.get("alpha.n")')"
 ok "opts went to ranma.set { alpha = ... }"
+[ "$(RL 'return ranma.get("plain.n")')" = "7" ] || fail "a bare string beside tables in setup's list was not read as a spec"
+ok "setup's list: a bare string beside tables is a spec of its own"
 [ "$(RL 'return ranma.get("beta.ok")')" = "true" ] || fail "beta (after dep, with its lua/) did not load"
 ok "a dependency loads first; a package's lua/ is on require's path"
 [ ! -e "$ROOT/off.ranma" ] || fail "a disabled plugin was installed"
