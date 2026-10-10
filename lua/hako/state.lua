@@ -8,8 +8,10 @@ return {
   spec_errors = {},
   imports = {},
   lock = {},
-  -- The operation running now ("update", ...), or nil; one at a time.
-  busy = nil,
-  -- name -> what its task is doing now.
+  -- name -> what its task is doing now: { task, frac, since, tail }.
   tasks = {},
+  -- name -> how its task in this run ended: { text, role }.
+  results = {},
+  -- The run going now: { op, total, done, failed }, or nil.
+  run = nil,
 }

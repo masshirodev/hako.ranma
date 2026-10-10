@@ -6,6 +6,7 @@
 #
 #   tests/e2e.sh          run it
 #   KEEP=1 tests/e2e.sh   leave the work directory for a look afterwards
+#   SHOW=1 tests/e2e.sh   print the screen as it is drawn
 set -euo pipefail
 
 HAKO=$(cd "$(dirname "$0")/.." && pwd)
@@ -31,7 +32,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-fail() { echo "FAIL: $*"; echo "--- hako:"; RL 'local s = {} for _, p in ipairs(require("hako").plugins()) do s[#s+1] = p.name .. ": " .. require("hako.ui").describe(p) end return table.concat(s, "\n")' || true; exit 1; }
+fail() { echo "FAIL: $*"; echo "--- screen:"; T capture-pane -p -t s 2>/dev/null || true; exit 1; }
 ok() { echo "ok   $*"; }
 # Lua in the test's server, printed as `ranma lua` prints it. It names the
 # test's socket: a pane exports RANMA_SOCKET, and the real server is the one
@@ -74,6 +75,7 @@ require("hako").setup({
   { "file://$SRC/off.ranma", enabled = false },
   { import = "plugins" },
 }, { root = "$ROOT", lockfile = "$CFG/hako-lock.json" })
+ranma.bar { right = { "hako", "clock" } }
 EOF
 echo "return { \"file://$SRC/broken.ranma\" }" > "$CFG/lua/plugins/broken.lua"
 echo "return { \"file://$SRC/typo.ranma\", event = \"VeryLazy\" }" > "$CFG/lua/plugins/typo.lua"
@@ -132,5 +134,52 @@ RL 'require("hako.ops").add("file://'"$SRC"'/gamma.ranma")' >/dev/null
 [ -f "$CFG/lua/plugins/gamma.lua" ] || fail "add wrote no spec file"
 until_lua 'return ranma.get("gamma.n") == 3' "an added plugin installs and loads"
 ok "add: lua/plugins/gamma.lua written, installed, loaded"
+
+# 6. The screen.
+scr() { T capture-pane -p -t s; }
+wait_screen() { # pattern, what
+  for _ in $(seq 1 40); do scr | grep -q -- "$1" && return 0; sleep 0.25; done
+  fail "$2 (no \"$1\" on screen)"
+}
+mkdir -p "$ROOT/stray.ranma"
+RL 'require("hako").open()' >/dev/null
+wait_screen "hako" "the screen opens"
+wait_screen "Failed" "the Failed section"
+wait_screen "✗ load" "a plugin that failed to load says so"
+wait_screen "✗ spec" "a spec hako refused is listed"
+wait_screen "Not in spec" "a stray has its section"
+scr | tail -1 | grep -q "✗ 2 failed" || fail "the bar module: $(scr | tail -1)"
+ok "the screen: sections, states, and the bar module"
+# SHOW=1 prints the screen as drawn, to hold up against the handoff's mock.
+if [ -n "${SHOW:-}" ]; then scr; fi
+T send-keys -t s a
+wait_screen "+ " "a: the line being typed"
+wait_screen " add " "a: the status says add"
+T send-keys -t s x / y
+wait_screen "+ x/y" "a: typing goes into the line"
+T send-keys -t s Escape
+for _ in $(seq 1 20); do scr | grep -q "+ x/y" || break; sleep 0.25; done
+scr | grep -q "+ x/y" && fail "esc did not take the add ask down"
+ok "a: an ask with a typed line, esc cancels"
+T send-keys -t s S
+wait_screen "sync?" "S with a stray asks first"
+wait_screen "deletes" "the stray is marked deletes"
+T send-keys -t s u
+sleep 0.5
+[ -d "$ROOT/stray.ranma" ] || fail "a key other than the answers deleted something"
+T send-keys -t s Escape
+sleep 0.5
+[ -d "$ROOT/stray.ranma" ] || fail "esc deleted the stray"
+ok "S: asks before it deletes; nothing but y answers"
+# l is a row's key (the handoff's table): back to the first row, which has it.
+for _ in $(seq 1 12); do T send-keys -t s k; done
+T send-keys -t s l
+wait_screen "log · the last 7 days" "l pushes the log"
+wait_screen "esc back" "the log says esc back"
+wait_screen "alpha.ranma" "the log holds the update made above"
+T send-keys -t s Escape
+wait_screen "Not in spec" "esc comes back to the list"
+scr | grep -q "hako" || fail "esc closed the screen instead of going back"
+ok "l: the log, and esc back to the list"
 
 echo "hako e2e: ok"

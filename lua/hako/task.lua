@@ -20,8 +20,9 @@ function M.start(fn, done)
     local ok, err = pcall(ranma.spawn, req.argv, {
       cwd = req.cwd,
       timeout = req.timeout or 120,
+      on_line = req.on_line,
       on_exit = function(x)
-        step(not x.error and x.code == 0, trim(x.stdout or ""), trim((x.error or "") .. (x.stderr or "")))
+        step(not x.error and x.code == 0, trim(x.stdout or ""), trim((x.error or "") .. (x.stderr or "")), x.code)
       end,
     })
     if not ok then step(false, "", tostring(err)) end
@@ -29,9 +30,10 @@ function M.start(fn, done)
   step()
 end
 
--- Inside a task: run a process; returns ok, stdout, stderr (trimmed).
-function M.run(argv, cwd, timeout)
-  return coroutine.yield({ argv = argv, cwd = cwd, timeout = timeout })
+-- Inside a task: run a process; returns ok, stdout, stderr (trimmed), and
+-- the exit code. With `on_line`, stdout goes line by line to it instead.
+function M.run(argv, cwd, timeout, on_line)
+  return coroutine.yield({ argv = argv, cwd = cwd, timeout = timeout, on_line = on_line })
 end
 
 -- Run `worker(item)` as a task for each item, `limit` at a time;

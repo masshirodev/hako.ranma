@@ -109,6 +109,46 @@ function M.git_head(path)
   return commit and (commit:gsub("%s+$", "")), ref:match("^refs/heads/(.+)$")
 end
 
+-- The first line of `path` holding `needle`, counted from 1, or nil.
+function M.find_line(path, needle)
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local n = 0
+  for line in f:lines() do
+    n = n + 1
+    if line:find(needle, 1, true) then
+      f:close()
+      return n
+    end
+  end
+  f:close()
+  return nil
+end
+
+-- How long ago, as the screen writes it: 5m, 2h, 3d, 2w.
+function M.age(t)
+  local s = math.max(0, os.time() - (t or os.time()))
+  if s < 3600 then return math.max(1, s // 60) .. "m" end
+  if s < 86400 then return (s // 3600) .. "h" end
+  if s < 14 * 86400 then return (s // 86400) .. "d" end
+  return (s // (7 * 86400)) .. "w"
+end
+
+-- Kilobytes as du -h writes them.
+function M.human_kb(kb)
+  if kb < 1024 then return kb .. "K" end
+  if kb < 1024 * 1024 then return (string.format("%.1fM", kb / 1024):gsub("%.0M", "M")) end
+  return (string.format("%.1fG", kb / 1024 / 1024):gsub("%.0G", "G"))
+end
+
+-- The editor a file opens in.
+function M.editor()
+  local e = os.getenv("VISUAL")
+  if e and e ~= "" then return e end
+  e = os.getenv("EDITOR")
+  return (e and e ~= "") and e or "nvim"
+end
+
 function M.first_line(text)
   return ((text or ""):match("[^\n]*") or ""):gsub("%s+$", "")
 end

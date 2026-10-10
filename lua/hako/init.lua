@@ -94,6 +94,11 @@ local function setup(specs, opts)
     opts, specs = specs, specs.spec
   end
   opts = opts or {}
+  for k in pairs(opts) do
+    if not ({ root = true, lockfile = true, key = true })[k] then
+      error("setup: unknown option `" .. tostring(k) .. "` (root, lockfile, key)", 0)
+    end
+  end
   state.opts = opts
   state.root = util.expand(opts.root or util.data_dir())
   state.lockfile = util.expand(opts.lockfile or ((ranma.config_dir or util.HOME) .. "/hako-lock.json"))
@@ -121,16 +126,17 @@ local function setup(specs, opts)
     if p.installed and p.on then load(p) end
   end
 
+  -- A spec hako could not read is hako's to say. A plugin that failed to
+  -- load, ranma has already toasted: the screen and the module show it.
   for _, e in ipairs(ctx.errors) do
     util.toast("hako: " .. util.tilde(e.source) .. ": " .. e.spec .. ": " .. e.error, true)
   end
-  for _, p in ipairs(state.plugins) do
-    if #p.errors > 0 then
-      util.toast("hako: " .. p.name .. ": " .. util.first_line(p.errors[1]), true)
-    end
-  end
 
-  require("hako.ui").install()
+  local ok, err = pcall(require("hako.ui").install, opts)
+  if not ok then util.toast("hako: " .. tostring(err), true) end
+  local screen = require("hako.screen")
+  screen.forget_added()
+  screen.after_load()
   require("hako.ops").after_load()
 end
 
@@ -145,12 +151,13 @@ function M.plugins()
   return state.plugins or {}
 end
 
--- The operations, for binds and `ranma lua`.
-for _, name in ipairs({ "install", "update", "check", "sync", "clean", "restore", "open" }) do
-  M[name] = function(...)
-    if name == "open" then return require("hako.ui").open(...) end
-    return require("hako.ops")[name](...)
-  end
+-- The operations, for binds and `ranma lua`. sync and clean ask first, on
+-- the screen.
+for _, name in ipairs({ "install", "update", "check", "restore" }) do
+  M[name] = function(...) return require("hako.ops")[name](...) end
+end
+for _, name in ipairs({ "open", "sync", "clean", "log" }) do
+  M[name] = function(...) return require("hako.screen")[name](...) end
 end
 
 return M

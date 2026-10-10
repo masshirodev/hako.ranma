@@ -92,30 +92,41 @@ whole (ranma's own rule for plugins), and hako lists the error.
 
 ## Using it
 
-The palette (leader `:`) has `hako`:
+**The screen**: `leader L` (or `hako` in the palette, or a click on the bar
+module) opens every plugin in sections by what needs you (Failed, Updates,
+Not installed, Installed, Not in spec, Not managed), with every operation on a
+key: `u/U` update, `i/I` install, `r/R` restore, `x/X` remove and clean, `C`
+check, `S` sync, `a` add, `l` the log, `e` the error's file, `o` the plugin's
+options. Nothing is deleted on one key: `x`, `X` and a cleaning `S` ask, and
+only `y` answers. `doc/SCREEN.md` is the account.
+
+The palette (leader `:`) has `hako` too:
 
 | | |
 | --- | --- |
-| `hako` | Every plugin and its state; pick one for what can be done to it, or one of the operations at the bottom. |
+| `hako` | The screen. |
 | `hako install` | Clone what is declared and missing. Runs by itself after a reload that declared something new. |
 | `hako update [name]` | Fetch, fast-forward, run `build`, lock where each landed, reload. |
 | `hako check [name]` | Fetch and count the new commits, changing nothing. Also every few hours on its own. |
-| `hako sync` | Install, clean, update. |
+| `hako sync` | Install and update; asks first if it would clean. |
 | `hako restore [name]` | Back to the lockfile's commits. |
-| `hako clean` | Delete clones no spec declares (it asks first). |
+| `hako clean` | Delete clones no spec declares (asks first). |
 | `hako add owner/repo` | Write `lua/plugins/<name>.lua` with the spec; the save reloads ranma, which installs it. |
 | `hako remove name` | For a plugin declared in a file of its own: delete the file and the clone (it asks first). Declared anywhere else, it says where. |
 | `hako log name` | The commits an update would bring, or the latest ones. |
 
-From Lua (a bind, `ranma lua`): `require("hako").update()`, `.check()`,
-`.sync()`, `.install()`, `.clean()`, `.restore()`, `.open()`.
+From Lua (a bind, `ranma lua`): `require("hako").open()`, `.update()`,
+`.check()`, `.install()`, `.restore()`, and `.sync()`, `.clean()`, `.log()`
+(which open the screen to ask or show).
 
-The list is a picker for now. Its own screen is being designed
-(ranma's `doc/briefs/PLUGIN_MANAGER.md`).
+**The bar.** A module named `hako`, placed like any other
+(`ranma.bar { right = { "hako", "clock" } }`), says nothing when there is
+nothing to say, `↑ 3 updates` after a check finds some, `✗ 1 failed ↑ 3` when a
+plugin failed, and `● sync 7/10` while a run goes with the screen closed; on a
+narrow terminal `↑3`. A click opens the screen.
 
-**The bar.** A module named `hako` shows `hako ↑2` when two plugins have
-updates, and nothing otherwise:
-`ranma.bar { right = { "hako", "clock" } }`.
+**The toast.** Once per check that finds new commits: `3 plugins have
+updates: history, compose and marks. leader L shows them; checked 16:30`.
 
 ## Settings
 
@@ -125,6 +136,7 @@ updates, and nothing otherwise:
 | --- | --- |
 | `root` | Where clones go. Default `$XDG_DATA_HOME/ranma/hako`. |
 | `lockfile` | Default `<config dir>/hako-lock.json`. Point it into your dotfiles to make another machine the same: `lockfile = "~/.config/myconf/ranma/hako-lock.json"`. |
+| `key` | The WM-mode key that opens the screen. Default `"shift+l"` (`leader L`); `false` binds nothing. |
 
 The rest are ranma options, in the settings panel under `hako`:
 `hako.install_missing`, `hako.check`, `hako.check_hours` (6),
@@ -147,7 +159,10 @@ checks out the locked commit; `update` moves it; `restore` goes back to it.
 `tests/e2e.sh` runs a private, headless ranma (its own sockets, state and
 config, in a tmux server of its own) against plugins cloned from local
 repositories: install, opts, dependencies, enabled, a failing plugin, a
-refused field, check, update, restore, clean and add.
+refused field, check, update, restore, clean and add, then the screen through
+tmux keys: sections and states, the bar module, the add ask, a sync that asks
+before deleting and takes only `y`, and the log with `esc` back.
+`SHOW=1 tests/e2e.sh` prints the screen as it is drawn.
 
 ## License
 

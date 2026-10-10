@@ -72,7 +72,11 @@ says where the spec is. Deleting anything asks first.
 
 ## The screen
 
-The list is a picker until the screen designed from ranma's
-`doc/briefs/PLUGIN_MANAGER.md` replaces it. That screen is built from
-`ranma.screen`'s blocks; anything it needs that they lack goes into ranma's
-core, for every plugin.
+Built from ranma's design handoff (`doc/handoffs/PLUGIN_MANAGER.md`); what it
+needed that `ranma.screen` lacked went into ranma for every plugin, not into
+hako. `doc/SCREEN.md` is the account, with where it departs from the handoff.
+
+A reload closes a plugin's screen (its Lua is gone), and every install and
+update reloads. So hako leaves a note in its store before it reloads (or
+before a save it caused does), and opens the screen again when it loads, on
+the row a key last acted on: ranma does not tell Lua which row is selected.

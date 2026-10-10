@@ -11,8 +11,9 @@ do (lazy-loading). Read both before changing behaviour.
   `ranma.packadd`.
 - `lua/hako/spec.lua`: parsing specs, strictly; `lua/hako/ops.lua`: the
   background operations; `lua/hako/task.lua`: coroutines over `ranma.spawn`;
-  `lua/hako/lock.lua`, `lua/hako/ui.lua`, `lua/hako/util.lua`,
-  `lua/hako/state.lua`.
+  `lua/hako/screen.lua`: the screen (`doc/SCREEN.md`); `lua/hako/ui.lua`:
+  the palette command, the key and the bar module; `lua/hako/lock.lua`,
+  `lua/hako/util.lua`, `lua/hako/state.lua`.
 - There is no `plugin/` directory: hako runs when `init.lua` calls `setup`.
 
 ## Before a commit

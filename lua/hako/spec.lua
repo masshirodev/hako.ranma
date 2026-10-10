@@ -131,6 +131,8 @@ local function add(ctx, t, source, single)
     end
   end
   p.url = url_of(t) or p.url
+  -- What the spec was written with, to find its line again.
+  p.src = p.src or t[1] or t.dir or t.url or t.name
   if t.dir then p.dir = util.expand(t.dir) end
   if t.main then p.main = t.main end
   for _, d in ipairs(deps) do
