@@ -165,29 +165,41 @@ local function target(p)
   return nil
 end
 
+-- Where a clone is made before it is a plugin: a reload kills every job the
+-- old configuration started, and a half-made clone under the plugin's own
+-- name would load as if installed. Renamed into place only when done.
+local function part_dir(p)
+  return state.root .. "/.part-" .. p.name
+end
+
 local function install_one(p)
   local t = begin(p, "clone")
+  -- The plugin as it is while being made: everything runs in the part dir.
+  local q = setmetatable({ path = part_dir(p) }, { __index = p })
+  task.run({ "rm", "-rf", "--", q.path })
   local argv = { "git", "clone", "--progress", "--filter=blob:none" }
   if p.branch then
     argv[#argv + 1] = "--branch"
     argv[#argv + 1] = p.branch
   end
   argv[#argv + 1] = p.url
-  argv[#argv + 1] = p.path
+  argv[#argv + 1] = q.path
   local ok, err, code = watched(t, argv)
   if not ok then return false, failure(t, "clone", argv, code, err) end
   local at, detached = target(p)
   if at then
     t.task, t.frac = "checkout", nil
     if detached then
-      ok, _, err = git(p, "checkout", "--quiet", at)
+      ok, _, err = git(q, "checkout", "--quiet", at)
     else
-      ok, _, err = git(p, "reset", "--hard", "--quiet", at)
+      ok, _, err = git(q, "reset", "--hard", "--quiet", at)
     end
     if not ok then return false, failure(t, "checkout", nil, nil, err) end
   end
-  local built, f = build(p)
+  local built, f = build(q)
   if not built then return false, f end
+  local moved, why = os.rename(q.path, p.path)
+  if not moved then return false, failure(t, "clone", nil, nil, "could not move it into place: " .. tostring(why)) end
   return true, { lock = locate(p), changed = true, result = { "✓ cloned", "normal" } }
 end
 
@@ -475,6 +487,8 @@ function M.cleanable()
   for _, name in ipairs(util.ls(state.root)) do
     local path = state.root .. "/" .. name
     local p = state.by_name[name]
+    -- A clone being made (or left by a run a reload stopped) is hako's own.
+    if name:sub(1, 1) == "." then p = { managed = true, wanted = true } end
     local wanted = p and p.managed and p.wanted
     if not wanted and path ~= state.self and util.is_dir(path) then out[#out + 1] = { name = name, path = path } end
   end
@@ -539,6 +553,18 @@ end
 -- Once ranma has loaded: install what is missing, and check when it is time.
 function M.after_load()
   util.later(function()
+    -- Clones a reload stopped half made: no job of this configuration is
+    -- making them, so they go, and the install below starts them over.
+    local parts = {}
+    for _, name in ipairs(util.ls(state.root)) do
+      if name:match("^%.part%-") then parts[#parts + 1] = state.root .. "/" .. name end
+    end
+    if #parts > 0 then
+      table.insert(parts, 1, "--")
+      table.insert(parts, 1, "-rf")
+      table.insert(parts, 1, "rm")
+      ranma.spawn(parts, { timeout = 60 })
+    end
     if ranma.get("hako.install_missing") then
       local n = 0
       for _, p in ipairs(managed()) do

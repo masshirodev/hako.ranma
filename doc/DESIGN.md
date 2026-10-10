@@ -50,6 +50,18 @@ ends in one `reload_config`.
 The list reads commits from `.git` files rather than running git: it is drawn
 inside a callback, which must not wait on a process.
 
+## A clone is renamed into place when it is whole
+
+A reload SIGTERMs every job the old configuration started, and installing
+ends in a reload, so a reload in the middle of a run is ordinary (saving a
+spec file is one). A clone is therefore made in `.part-<name>` beside the
+others, checked out and built there, and renamed to its name only when all of
+that worked. A directory under a plugin's name is always a whole one, a
+`.part-` one is never loaded, and the next load deletes leftovers and installs
+what is still missing. Found the first time hako was switched on for real: a
+reload mid-install left half-cloned directories that the next load took as
+installed.
+
 ## State that outlives a reload
 
 Lua starts over on every reload, and every update ends in one. Update counts,

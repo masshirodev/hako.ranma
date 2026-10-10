@@ -133,6 +133,16 @@ for _ in $(seq 1 40); do [ ! -e "$ROOT/stray.ranma" ] && break; sleep 0.25; done
 [ -d "$ROOT/alpha.ranma" ] || fail "clean deleted a declared plugin"
 ok "clean: deletes what nothing declares, only that"
 
+# 4b. A clone a reload stopped half made is never loaded, and the next load
+#     clears it away.
+mkdir -p "$ROOT/.part-half.ranma/plugin"
+echo 'error("a half-made clone was loaded")' > "$ROOT/.part-half.ranma/plugin/half.lua"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+for _ in $(seq 1 40); do [ ! -e "$ROOT/.part-half.ranma" ] && break; sleep 0.25; done
+[ ! -e "$ROOT/.part-half.ranma" ] || fail "a leftover part dir was not cleared"
+RL 'for _, p in ipairs(require("hako").plugins()) do if p.name:find("half") then return "loaded" end end return "no"' | grep -q no || fail "a part dir was taken for a plugin"
+ok "a half-made clone is never a plugin, and is cleared on load"
+
 # 5. Add: a file of its own, then the reload installs it.
 RL 'require("hako.ops").add("file://'"$SRC"'/gamma.ranma")' >/dev/null
 [ -f "$CFG/lua/plugins/gamma.lua" ] || fail "add wrote no spec file"
