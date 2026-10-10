@@ -50,6 +50,21 @@ ends in one `reload_config`.
 The list reads commits from `.git` files rather than running git: it is drawn
 inside a callback, which must not wait on a process.
 
+## Installing is the user's choice
+
+hako clones itself on a first start, and nothing else: a declared plugin that
+is not installed waits under *Not installed* until someone picks it (`i`,
+`I`, `S`, `hako install`), and a toast says how many there are, once for each
+new set. Dotfiles shared between machines declare everything, and not every
+machine wants every plugin installed the moment it starts. `a` and
+`hako add` are a choice already, so what they add installs.
+
+What was asked for is kept in the store (`pending`) until it lands, because a
+reload stops every job: the next load installs what is still pending.
+`hako.install_missing = true` installs everything declared, as lazy.nvim
+does. The lock is written as each plugin lands rather than when the run ends,
+for the same reason.
+
 ## A clone is renamed into place when it is whole
 
 A reload SIGTERMs every job the old configuration started, and installing

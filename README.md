@@ -25,7 +25,7 @@ if ranma.packadd(hako) then
     { import = "plugins" },            -- one file per plugin, in lua/plugins/
   })
 else
-  -- The first start: clone hako, then reload, which installs the rest.
+  -- The first start: clone hako, then reload.
   ranma.defer(0, function()
     ranma.spawn({ "git", "clone", "--filter=blob:none", "https://github.com/masshirodev/hako.ranma", hako }, {
       on_exit = function(r)
@@ -44,6 +44,15 @@ end
 so the first start clones it in the background and reloads; every start after
 that loads it at once. Settings and binds after the `setup` call see the
 plugins it loaded.
+
+**hako installs itself; the plugins wait for you.** A plugin that is declared
+and not installed is not cloned until you ask: a toast says how many are
+missing, and on the screen they wait under *Not installed*, where `i` installs
+one and `I` all of them (or `hako install`, or `S`). Adding one with `a` or
+`hako add` is asking, so that one installs. An install a reload stops partway
+is picked up again by the next load. To have every declared plugin installed
+by itself, as lazy.nvim does, set
+`ranma.set { hako = { install_missing = true } }`.
 
 ## Specs
 
@@ -105,7 +114,7 @@ The palette (leader `:`) has `hako` too:
 | | |
 | --- | --- |
 | `hako` | The screen. |
-| `hako install` | Clone what is declared and missing. Runs by itself after a reload that declared something new. |
+| `hako install [name]` | Clone what is declared and missing (or that one). By itself only with `hako.install_missing`. |
 | `hako update [name]` | Fetch, fast-forward, run `build`, lock where each landed, reload. |
 | `hako check [name]` | Fetch and count the new commits, changing nothing. Also every few hours on its own. |
 | `hako sync` | Install and update; asks first if it would clean. |
@@ -139,8 +148,8 @@ updates: history, compose and marks. leader L shows them; checked 16:30`.
 | `key` | The WM-mode key that opens the screen. Default `"shift+l"` (`leader L`); `false` binds nothing. |
 
 The rest are ranma options, in the settings panel under `hako`:
-`hako.install_missing`, `hako.check`, `hako.check_hours` (6),
-`hako.notify`, `hako.concurrency` (4).
+`hako.install_missing` (off: install only what you pick), `hako.check`,
+`hako.check_hours` (6), `hako.notify`, `hako.concurrency` (4).
 
 ## The lockfile
 

@@ -16,8 +16,8 @@ local M = {}
 
 local function declare_options()
   ranma.option("hako.install_missing", {
-    type = "bool", default = true,
-    name = "Install missing", desc = "Clone what the specs declare and is not installed, as ranma loads.",
+    type = "bool", default = false,
+    name = "Install missing", desc = "Clone what the specs declare and is not installed, as ranma loads. Off: hako says what is missing, and installs what you pick.",
   })
   ranma.option("hako.check", {
     type = "bool", default = true,

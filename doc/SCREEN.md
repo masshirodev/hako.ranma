@@ -89,6 +89,12 @@ never rewrites `init.lua`, and `e` opens it at the line.
   not tell Lua which row is selected, and every install or update reloads.
 - **Meters** come from git's own progress (`Receiving objects: 60%`); a fetch
   with nothing to receive shows the task and a time instead.
+- **The first run does not install by itself.** The handoff drew the screen
+  opening on its own to clone three plugins. hako installs itself, then waits
+  for the user to pick (`i`, `I`, `S`) and toasts what is missing; the screen
+  opens on its own only to show an install someone asked for (an `a`, or one
+  a reload stopped). `hako.install_missing = true` brings the handoff's first
+  run back.
 - **Paths and the bootstrap**: clones are in `~/.local/share/ranma/hako/`, the
   lockfile is `hako-lock.json`, and the bootstrap is `ranma.packadd` plus a
   background `git clone` (the handoff drew it with stand-in calls).

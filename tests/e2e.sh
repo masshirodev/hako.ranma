@@ -64,6 +64,7 @@ repo beta.ranma 'lua/beta.lua=return { ok = true }' \
   'plugin/beta.lua=assert(DEP_LOADED, "dep loads first") ranma.option("beta.ok", { type = "bool", default = (require("beta")).ok })'
 repo broken.ranma 'plugin/broken.lua=error("boom")'
 repo off.ranma 'plugin/off.lua=error("disabled: never loaded")'
+repo slow.ranma 'plugin/slow.lua=ranma.option("slow.n", { type = "int", default = 9 })'
 repo plain.ranma 'plugin/plain.lua=ranma.option("plain.n", { type = "int", default = 7 })'
 repo gamma.ranma 'plugin/gamma.lua=ranma.option("gamma.n", { type = "int", default = 3 })'
 
@@ -72,6 +73,7 @@ cat > "$CFG/init.lua" <<EOF
 assert(ranma.packadd("$HAKO"))
 require("hako").setup({
   "file://$SRC/plain.ranma",
+  { "file://$SRC/slow.ranma", build = "sleep 3" },
   { "file://$SRC/alpha.ranma", opts = { n = 5 } },
   { "file://$SRC/beta.ranma", dependencies = { "file://$SRC/dep.ranma" } },
   { "file://$SRC/off.ranma", enabled = false },
@@ -85,8 +87,20 @@ echo "return { \"file://$SRC/typo.ranma\", event = \"VeryLazy\" }" > "$CFG/lua/p
 T new-session -d -s s -x 120 -y 30 "${ENVV[*]} ranma; sleep 60"
 for _ in $(seq 1 40); do RL 'true' >/dev/null 2>&1 && break; sleep 0.25; done
 
-# 1. First start: everything declared and enabled is cloned, locked, and
-#    loaded on the reload that follows.
+# 1. First start: nothing is cloned until asked; hako says what is missing.
+#    Asked, everything declared and enabled is cloned, locked, and loaded on
+#    the reload that follows.
+sleep 2
+[ -z "$(ls -A "$ROOT")" ] || fail "a first start installed something nobody asked for: $(ls "$ROOT")"
+T capture-pane -p -t s | grep -q "declared, not installed" || fail "no word about the missing plugins"
+ok "a first start installs nothing, and says what is missing"
+RL 'require("hako").install()' >/dev/null
+# A reload in the middle (slow.ranma's build sleeps) stops the run; what was
+# asked for is installed by the load after it all the same.
+sleep 1.5
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+until_lua 'return ranma.get("slow.n") == 9' "an install a reload stopped resumes"
+ok "an install a reload stopped resumes on the next load"
 until_lua 'local l = io.open("'"$CFG"'/hako-lock.json") and io.open("'"$CFG"'/hako-lock.json"):read("a") or "" return l:find("alpha") ~= nil and l:find("broken") ~= nil and ranma.get("alpha.n") ~= nil' "installed and reloaded"
 ok "missing plugins installed, locked, reloaded"
 [ "$(RL 'return ranma.get("alpha.n")')" = "5" ] || fail "opts applied: alpha.n is $(RL 'return ranma.get("alpha.n")')"

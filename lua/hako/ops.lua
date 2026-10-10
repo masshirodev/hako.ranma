@@ -348,7 +348,12 @@ local function run(op, plugins, worker, opts)
     local r = type(res) == "table" and res or {}
     if ok then
       set_failure(p.name, nil)
-      if r.lock then found[p.name] = r.lock end
+      -- Locked as each one lands, not at the end: a reload may stop the run
+      -- before it ends, and what landed must be in the lock all the same.
+      if r.lock then
+        found[p.name] = r.lock
+        relock({ [p.name] = r.lock })
+      end
       if r.changed then n_changed = n_changed + 1 end
       if r.n and r.n > 0 then notes[#notes + 1] = p.name end
       if r.result then state.results[p.name] = r.result end
@@ -363,7 +368,6 @@ local function run(op, plugins, worker, opts)
   end, function()
     ranma.cancel(ticker)
     state.run = nil
-    if next(found) then relock(found) end
     if ok_screen then screen.thaw() end
     changed()
     local open = ok_screen and screen.is_open()
@@ -383,12 +387,31 @@ function M.running()
   return state.run
 end
 
+-- Installs someone asked for and that have not finished: a reload stops a
+-- run, and the next load picks these up again.
+local function pending()
+  return store():get("pending") or {}
+end
+
+local function set_pending(name, on)
+  local all = pending()
+  all[name] = on or nil
+  store():set("pending", all)
+end
+
 function M.install(name, opts)
   local missing = {}
   for _, p in ipairs(managed(name)) do
-    if not p.installed then missing[#missing + 1] = p end
+    if not p.installed then
+      missing[#missing + 1] = p
+      set_pending(p.name, true)
+    end
   end
-  run("install", missing, install_one, opts)
+  run("install", missing, function(p)
+    local ok, res = install_one(p)
+    if ok then set_pending(p.name, nil) end
+    return ok, res
+  end, opts)
 end
 
 function M.update(name, opts)
@@ -471,7 +494,14 @@ end
 -- screen's to ask about before (`clean = true` deletes them first).
 function M.sync(clean)
   local function go()
-    run("sync", managed(), sync_one)
+    for _, p in ipairs(managed()) do
+    if not p.installed then set_pending(p.name, true) end
+  end
+  run("sync", managed(), function(p)
+    local ok, res = sync_one(p)
+    if ok then set_pending(p.name, nil) end
+    return ok, res
+  end)
   end
   if clean then return M.delete(M.cleanable(), go) end
   go()
@@ -547,6 +577,8 @@ function M.add(src)
     .. string.format("%q", src) .. ",\n}\n")
   if not ok then return nil, tostring(err) end
   store():set("added", name)
+  -- Adding is asking for it: the load the save sets off installs it.
+  set_pending(name, true)
   return name
 end
 
@@ -554,7 +586,8 @@ end
 function M.after_load()
   util.later(function()
     -- Clones a reload stopped half made: no job of this configuration is
-    -- making them, so they go, and the install below starts them over.
+    -- making them, so they go, and the install below starts over the ones
+    -- that were asked for.
     local parts = {}
     for _, name in ipairs(util.ls(state.root)) do
       if name:match("^%.part%-") then parts[#parts + 1] = state.root .. "/" .. name end
@@ -565,16 +598,46 @@ function M.after_load()
       table.insert(parts, 1, "rm")
       ranma.spawn(parts, { timeout = 60 })
     end
-    if ranma.get("hako.install_missing") then
-      local n = 0
-      for _, p in ipairs(managed()) do
-        if not p.installed then n = n + 1 end
-      end
-      if n > 0 then
-        require("hako.screen").open({ reason = "opened to install " .. n .. (n == 1 and " plugin" or " plugins") })
-        M.install()
+    local missing, asked = {}, {}
+    local wanted = pending()
+    for _, p in ipairs(managed()) do
+      if not p.installed then
+        missing[#missing + 1] = p.name
+        if wanted[p.name] then asked[#asked + 1] = p end
+      else
+        wanted[p.name] = nil
       end
     end
+    store():set("pending", wanted)
+    if #missing == 0 then return end
+    local auto = ranma.get("hako.install_missing")
+    local list = auto and missing or {}
+    if not auto then
+      for _, p in ipairs(asked) do list[#list + 1] = p.name end
+    end
+    if #list > 0 then
+      local n = #list
+      require("hako.screen").open({ reason = "opened to install " .. n .. (n == 1 and " plugin" or " plugins") })
+      run("install", (function()
+        local ps = {}
+        for _, name in ipairs(list) do ps[#ps + 1] = state.by_name[name] end
+        return ps
+      end)(), function(p)
+        local ok, res = install_one(p)
+        if ok then set_pending(p.name, nil) end
+        return ok, res
+      end)
+      return
+    end
+    -- Declared and not installed, and nobody asked: say so, once for each
+    -- new set of names, and let them pick.
+    table.sort(missing)
+    local key = table.concat(missing, ",")
+    if store():get("told_missing") == key then return end
+    store():set("told_missing", key)
+    local open = require("hako.screen").key_name()
+    ranma.toast(#missing .. (#missing == 1 and " plugin is" or " plugins are") .. " declared, not installed: "
+      .. (open or "hako") .. " shows them; i installs one, I all.")
   end)
   local function due()
     if not ranma.get("hako.check") then return end
