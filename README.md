@@ -11,39 +11,55 @@ loads, and a ranma plugin loads in about a millisecond, so there is nothing to
 put off and nothing to gain. lazy.nvim's `event`, `cmd`, `ft` and `lazy` fields
 are refused by name rather than ignored.
 
-Needs a ranma with `ranma.packadd` (2026-10-10 or later) and `git`.
+Needs a ranma with `ranma.packadd` (2026-10-10 or later) and `git`; a ranma
+from later that day installs hako by itself.
 
 ## Install
 
-At the top of `~/.config/ranma/init.lua`:
+**ranma installs hako itself** (from 2026-10-10): its first start clones this
+repository into `~/.local/share/ranma/hako/hako.ranma` and reloads, and from
+then on `require("hako")` loads it. With nothing in your `init.lua`, hako runs
+with the default specs, itself and `{ import = "plugins" }`, so a plugin is
+one file in `~/.config/ranma/lua/plugins/`:
+
+```lua
+-- ~/.config/ranma/lua/plugins/history.lua
+return { "masshirodev/history.ranma" }
+```
+
+To choose the specs or the lockfile yourself, call `setup` in `init.lua`,
+which replaces the default list:
+
+```lua
+require("hako").setup({
+  "masshirodev/hako.ranma",          -- so hako updates itself
+  { import = "plugins" },            -- one file per plugin, in lua/plugins/
+}, { lockfile = "~/.config/ranma/hako-lock.json" })
+```
+
+`ranma.set { plugin_manager = "none" }` leaves hako out (ranma's `doc/CONFIG.md`,
+"Plugins"). Settings and binds after the `setup` call see the plugins it
+loaded.
+
+An older ranma (before 2026-10-10, with `ranma.packadd` but no
+`plugin_manager` setting) needs the bootstrap at the top of `init.lua`
+instead:
 
 ```lua
 local hako = (os.getenv("XDG_DATA_HOME") or (os.getenv("HOME") .. "/.local/share")) .. "/ranma/hako/hako.ranma"
 if ranma.packadd(hako) then
-  require("hako").setup({
-    "masshirodev/hako.ranma",          -- so hako updates itself
-    { import = "plugins" },            -- one file per plugin, in lua/plugins/
-  })
+  require("hako").setup({ "masshirodev/hako.ranma", { import = "plugins" } })
 else
-  -- The first start: clone hako, then reload.
   ranma.defer(0, function()
     ranma.spawn({ "git", "clone", "--filter=blob:none", "https://github.com/masshirodev/hako.ranma", hako }, {
       on_exit = function(r)
-        if r.code == 0 then
-          ranma.action("reload_config")
-        else
-          ranma.toast("hako: clone failed: " .. (r.stderr or ""), { urgent = true })
-        end
+        if r.code == 0 then ranma.action("reload_config")
+        else ranma.toast("hako: clone failed: " .. (r.stderr or ""), { urgent = true }) end
       end,
     })
   end)
 end
 ```
-
-`ranma.packadd` loads hako when it is there and says `false` when it is not,
-so the first start clones it in the background and reloads; every start after
-that loads it at once. Settings and binds after the `setup` call see the
-plugins it loaded.
 
 **hako installs itself; the plugins wait for you.** A plugin that is declared
 and not installed is not cloned until you ask: a toast says how many are
