@@ -189,6 +189,9 @@ tmux keys: sections and states, the bar module, the add ask, a sync that asks
 before deleting and takes only `y`, and the log with `esc` back.
 `SHOW=1 tests/e2e.sh` prints the screen as it is drawn.
 
+CI (`.github/workflows/ci.yml`) runs it against the latest ranma release on
+every push to `main` and every pull request.
+
 ## License
 
 MIT or Apache-2.0, as ranma.
