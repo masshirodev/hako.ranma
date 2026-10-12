@@ -7,6 +7,8 @@ local util = require("hako.util")
 local state = require("hako.state")
 local ops = require("hako.ops")
 local spec = require("hako.spec")
+local browse = require("hako.browse")
+local lists = require("hako.lists")
 
 local M = {}
 
@@ -19,6 +21,17 @@ local marked = {}  -- ids an ask would delete: the `deletes` mark
 local last_row     -- the row a key last acted on: the selection after a reload
 local refresh_due = false
 local sizes = {}   -- stray name -> { kb, age }, filled in the background
+local view = "installed" -- or "browse", while Browse is pushed over the list
+local ask_status   -- a standing ask's status, kept over background redraws
+local clears = false -- whether this ranma's s:set takes status = false
+
+-- A status to set: nil means "no status", which s:set reads as "unchanged"
+-- unless it is false (a ranma from before that keeps the old one instead).
+local function st(v)
+  if v ~= nil then return v end
+  if clears then return false end
+  return nil
+end
 
 local function store()
   return state.store
@@ -457,6 +470,7 @@ local CARD = {
   { "C", "check all for updates" },
   { "S", "sync: install, clean, pull" },
   { "a", "add one: owner/repo" },
+  { "B", "browse plugins from lists" },
   { "l", "the log of its updates" },
   { "b", "run its build again", "build" },
   { "e", "edit at the error", "load" },
@@ -464,11 +478,32 @@ local CARD = {
   { "o", "its options in settings" },
 }
 
+local browse_ctx
+
+-- The installed view's last line: what Browse has that is not declared.
+local function with_more(b)
+  local n, from = browse.more()
+  b[#b + 1] = { "space" }
+  if from == 0 then
+    b[#b + 1] = { "text", "B browses plugins from the official list.", role = "dim" }
+  elseif n > 0 then
+    b[#b + 1] = { "text", "B browses " .. n .. " more, from " .. from .. (from == 1 and " list." or " lists."), role = "dim" }
+  end
+  return b
+end
+
 local function refresh()
   refresh_due = false
   if not screen then return end
+  if view == "browse" then
+    local b, count, lst = browse.view(browse_ctx)
+    -- Browse's status is about lists and installs; a plugin failing to load
+    -- is the installed view's to say.
+    screen:set { body = b, count = count, status = st(ask_status or (state.run and status()) or lst) }
+    return
+  end
   local b, n = body()
-  screen:set { body = b, status = status(), count = n .. (n == 1 and " plugin" or " plugins") }
+  screen:set { body = with_more(b), status = st(ask_status or status()), count = n .. (n == 1 and " plugin" or " plugins") }
 end
 
 -- Something changed: redraw soon (many changes in a burst redraw once).
@@ -494,13 +529,15 @@ end
 
 -- An ask's own status, then back to the screen's.
 local function asking(t, word, role)
-  screen:set { status = { word, role or "urgent" } }
+  ask_status = { word, role or "urgent" }
+  screen:set { status = ask_status }
   t.keys = t.keys or {}
   screen:ask(t)
 end
 
 local function done_asking()
   marked = {}
+  ask_status = nil
   refresh()
 end
 
@@ -686,19 +723,178 @@ function show_log()
   }
 end
 
+-- ---------------------------------------------------------------------------
+-- Browse (B): the lists' plugins, pushed over the list. browse.lua builds it.
+-- ---------------------------------------------------------------------------
+
+local BROWSE_CARD = {
+  { "i", "install it" },
+  { "t", "turn a list off · on", "list" },
+  { "x", "remove a list (asks)", "list" },
+  { "a", "add a list: its URL" },
+  { "C", "fetch every list again" },
+  { "B", "the installed view" },
+  { "o", "its options in settings" },
+}
+
+local ask_add_list, ask_remove_list
+
+browse_ctx = {
+  on = on,
+  where = function(p) return (declared(p)) end,
+  open_dir = function(path) open_dir(path) end,
+  install = function(e, p)
+    if p then return ops.install(p.name) end
+    local name, err = ops.add(e.repo, e.from[1])
+    if not name then
+      refresh()
+      return ranma.toast("hako: " .. err, { urgent = true })
+    end
+    last_row = e.name
+    M.before_reload()
+  end,
+  back = function(sel)
+    screen:pop()
+    view = "installed"
+    refresh()
+    if sel then screen:set { select = sel } end
+  end,
+  toggle = function(l)
+    lists.toggle(l.url)
+    if not l.on then browse.fetch(false, M.changed) end
+    refresh()
+  end,
+  ask_remove = function(l) ask_remove_list(l) end,
+}
+
+local function fetch_all()
+  if not browse.fetch(true, M.changed) then ranma.notify("hako: every list is off") end
+  refresh()
+end
+
+function ask_add_list()
+  asking({
+    blocks = {
+      { "text", "A list's URL: one JSON file.", strong = true },
+      { "text", "enter fetches it and shows what it holds; nothing is added yet.", role = "dim", max = 2 },
+      { "facts", { "then writes", util.tilde(state.lists_file):match("[^/]*$") } },
+      { "space" },
+    },
+    input = { prefix = "+", text = "" },
+    keys = {
+      { "enter", "fetch", function(_, text)
+        local url = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if url == "" then return refresh() end
+        screen:set { status = { "fetching", "accent" } }
+        lists.peek(url, function(list, err, body)
+          if not screen then return end
+          if not list then
+            refresh()
+            return ranma.toast("hako: " .. url .. ": " .. tostring(err), { urgent = true })
+          end
+          local n = #list.plugins
+          local add = function()
+            done_asking()
+            lists.add(url, body)
+            last_row = "list:" .. url
+            refresh()
+            screen:set { select = "list:" .. url }
+          end
+          -- The official list needs no warning: it is the one somebody reviews.
+          if url == lists.OFFICIAL then return add() end
+          asking({
+            blocks = {
+              { "text", "Add the list " .. list.name .. "?", role = "urgent", strong = true },
+              { "facts", { "", n .. (n == 1 and " plugin" or " plugins") }, { "", (url:gsub("^https://", "")) } },
+              { "text", "Nobody reviews this list. Its plugins are Lua that runs as you: they can read "
+                .. "your files and run any program. Add it only if you trust who keeps it.", max = 4 },
+            },
+            keys = {
+              { "y", "add it", add, role = "urgent" },
+              { "esc", "cancel", done_asking },
+            },
+          }, "add list?")
+        end)
+      end },
+      { "esc", "cancel", done_asking },
+      { "ctrl+u", "clear" },
+    },
+  }, "add list", "accent")
+end
+
+function ask_remove_list(l)
+  local name = l.list and l.list.name or l.url
+  local n = l.list and #l.list.plugins
+  browse.mark(l.url, true)
+  refresh()
+  asking({
+    blocks = {
+      { "text", "Remove " .. name .. "?", role = "urgent", strong = true },
+      { "text", (n and ("Its " .. n .. " plugins leave Browse. ") or "")
+        .. "What you installed from it stays installed, and updates from its own repository.", max = 3 },
+      { "facts", { "edits", util.tilde(state.lists_file):match("[^/]*$") } },
+    },
+    keys = {
+      { "y", "remove", function()
+        browse.unmark()
+        lists.remove(l.url)
+        done_asking()
+      end, role = "urgent" },
+      { "esc", "keep it", function() browse.unmark(); done_asking() end },
+    },
+  }, "remove?")
+end
+
+-- B: Browse over the list, fetching the lists that are due.
+function M.browse(sel)
+  if not screen then return M.open({ view = "browse", sel = sel }) end
+  view = "browse"
+  browse.query("")
+  browse.fetch(false, M.changed)
+  local b, count, lst = browse.view(browse_ctx)
+  local t = {
+    count = count, status = (state.run and status()) or lst, body = b, card = BROWSE_CARD,
+    keys = {
+      { "a", "add list", function() ask_add_list() end },
+      { "C", "fetch", function() fetch_all() end },
+      { "B", "installed view", function() browse_ctx.back() end },
+    },
+    filter = "plugin",
+    on_query = function(q)
+      browse.query(q)
+      refresh()
+    end,
+    on_back = function()
+      view = "installed"
+      refresh()
+    end,
+  }
+  -- A ranma from before pushed views took a filter of their own filters by
+  -- name: Browse still works, matching names only.
+  if not pcall(screen.push, screen, t) then
+    t.filter, t.on_query, t.on_back = "names", nil, nil
+    screen:push(t)
+  end
+  if sel then screen:set { select = sel } end
+end
+
 -- Open the screen, or bring it up to date. opts: reason (the subtitle when
 -- it opened by itself), sel (a row to select).
 function M.open(opts)
   opts = opts or {}
   if opts.reason then reason = opts.reason end
-  local b, n = body()
   if screen then
-    screen:set { body = b, status = status(), select = opts.sel }
+    if opts.view == "browse" and view ~= "browse" then return M.browse(opts.sel) end
+    refresh()
+    if opts.sel then screen:set { select = opts.sel } end
     return
   end
+  local b, n = body()
+  b = with_more(b)
   marked = {}
+  view = "installed"
   screen = ranma.screen {
-    title = "hako", chip = "HAKO", options = true, group = "hako", detail = 5,
+    title = "hako", chip = "HAKO", options = true, group = "hako", detail = 6,
     filter = reason and false or "names",
     subtitle = reason,
     count = n .. (n == 1 and " plugin" or " plugins"),
@@ -707,14 +903,18 @@ function M.open(opts)
       { "S", "sync", function() sync_ask() end },
       { "a", "add", function() ask_add() end },
       { "C", "check", function() ops.check() end },
+      { "B", "browse", function() M.browse() end },
     },
     card = CARD,
     body = b,
     empty = "no plugins: declare some in require(\"hako\").setup",
     on_close = function()
-      screen, reason, marked = nil, nil, {}
+      screen, reason, marked, view, ask_status = nil, nil, {}, "installed", nil
+      browse.unmark()
     end,
   }
+  clears = pcall(screen.set, screen, { status = status() or false })
+  if opts.view == "browse" then return M.browse(opts.sel) end
   if opts.sel then screen:set { select = opts.sel } end
 end
 
@@ -744,7 +944,7 @@ end
 -- hako is about to reload ranma (or a save will): the screen closes with the
 -- Lua it belongs to, so leave a note to open it again on the same row.
 function M.before_reload()
-  if screen then store():set("reopen", { sel = last_row }) end
+  if screen then store():set("reopen", { sel = last_row, view = view }) end
 end
 
 -- After a load: open again if a reload of hako's closed the screen.
@@ -752,7 +952,7 @@ function M.after_load()
   local again = store():get("reopen")
   if not again then return end
   store():set("reopen", nil)
-  util.later(function() M.open({ sel = again.sel }) end)
+  util.later(function() M.open({ sel = again.sel, view = again.view }) end)
 end
 
 -- "leader L": the key `setup` bound to open the screen, as the toast names it.

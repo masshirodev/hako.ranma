@@ -95,13 +95,14 @@ local function setup(specs, opts)
   end
   opts = opts or {}
   for k in pairs(opts) do
-    if not ({ root = true, lockfile = true, key = true })[k] then
-      error("setup: unknown option `" .. tostring(k) .. "` (root, lockfile, key)", 0)
+    if not ({ root = true, lockfile = true, lists = true, key = true })[k] then
+      error("setup: unknown option `" .. tostring(k) .. "` (root, lockfile, lists, key)", 0)
     end
   end
   state.opts = opts
   state.root = util.expand(opts.root or util.data_dir())
   state.lockfile = util.expand(opts.lockfile or ((ranma.config_dir or util.HOME) .. "/hako-lock.json"))
+  state.lists_file = util.expand(opts.lists or ((ranma.config_dir or util.HOME) .. "/hako-lists.json"))
   state.self = self_dir()
   state.store = ranma.store("hako")
   declare_options()
@@ -156,7 +157,7 @@ end
 for _, name in ipairs({ "install", "update", "check", "restore" }) do
   M[name] = function(...) return require("hako.ops")[name](...) end
 end
-for _, name in ipairs({ "open", "sync", "clean", "log" }) do
+for _, name in ipairs({ "open", "sync", "clean", "log", "browse" }) do
   M[name] = function(...) return require("hako.screen")[name](...) end
 end
 

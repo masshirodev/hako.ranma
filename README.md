@@ -12,7 +12,12 @@ put off and nothing to gain. lazy.nvim's `event`, `cmd`, `ft` and `lazy` fields
 are refused by name rather than ignored.
 
 Needs a ranma with `ranma.packadd` (2026-10-10 or later) and `git`; a ranma
-from later that day installs hako by itself.
+from later that day installs hako by itself. Browse fetches its lists with
+`curl`.
+
+**Finding plugins**: `B` on hako's screen browses the plugins of the
+[official list](https://github.com/masshirodev/ranma-plugins) and of any list
+you add, and `i` installs one. See [Browse](#browse).
 
 ## Install
 
@@ -140,7 +145,7 @@ The palette (leader `:`) has `hako` too:
 | `hako remove name` | For a plugin declared in a file of its own: delete the file and the clone (it asks first). Declared anywhere else, it says where. |
 | `hako log name` | The commits an update would bring, or the latest ones. |
 
-From Lua (a bind, `ranma lua`): `require("hako").open()`, `.update()`,
+From Lua (a bind, `ranma lua`): `require("hako").open()`, `.browse()`, `.update()`,
 `.check()`, `.install()`, `.restore()`, and `.sync()`, `.clean()`, `.log()`
 (which open the screen to ask or show).
 
@@ -153,6 +158,26 @@ narrow terminal `↑3`. A click opens the screen.
 **The toast.** Once per check that finds new commits: `3 plugins have
 updates: history, compose and marks. leader L shows them; checked 16:30`.
 
+## Browse
+
+`B` on the screen (or `require("hako").browse()`) shows the plugins of every
+plugin list you have on: what is not installed yet, what is available, what
+needs a newer ranma, what you have, and the lists themselves. `i` installs
+the selected plugin (a spec file in `lua/plugins/`, as `a` writes, saying
+which list it came from), `/` filters by words (name, description, author) or
+`#tag`, `C` fetches every list again, `esc` or `B` goes back.
+
+A **plugin list** is one JSON file at a URL. The official one is
+[masshirodev/ranma-plugins](https://github.com/masshirodev/ranma-plugins),
+reviewed before a plugin goes on it. Anyone can publish another: `a` adds one
+by its URL, after showing what it holds and asking (`y`), since nobody reviews
+it and its plugins run as you. `t` turns a list off or on, `x` removes one
+(the official list turns off, it is never removed). Plugins from a list that
+is not the official one are marked `unreviewed`.
+
+[`doc/LISTS.md`](doc/LISTS.md) is the format and what hako does with lists;
+[`doc/SCREEN.md`](doc/SCREEN.md) the view.
+
 ## Settings
 
 `setup(specs, opts)`:
@@ -161,11 +186,13 @@ updates: history, compose and marks. leader L shows them; checked 16:30`.
 | --- | --- |
 | `root` | Where clones go. Default `$XDG_DATA_HOME/ranma/hako`. |
 | `lockfile` | Default `<config dir>/hako-lock.json`. Point it into your dotfiles to make another machine the same: `lockfile = "~/.config/myconf/ranma/hako-lock.json"`. |
+| `lists` | Which plugin lists Browse has. Default `<config dir>/hako-lists.json`, written only when you change one; dotfiles again. |
 | `key` | The WM-mode key that opens the screen. Default `"shift+l"` (`leader L`); `false` binds nothing. |
 
 The rest are ranma options, in the settings panel under `hako`:
 `hako.install_missing` (off: install only what you pick), `hako.check`,
-`hako.check_hours` (6), `hako.notify`, `hako.concurrency` (4).
+`hako.check_hours` (6; also how old a plugin list gets before Browse fetches
+it again), `hako.notify`, `hako.concurrency` (4).
 
 ## The lockfile
 
@@ -186,7 +213,11 @@ config, in a tmux server of its own) against plugins cloned from local
 repositories: install, opts, dependencies, enabled, a failing plugin, a
 refused field, check, update, restore, clean and add, then the screen through
 tmux keys: sections and states, the bar module, the add ask, a sync that asks
-before deleting and takes only `y`, and the log with `esc` back.
+before deleting and takes only `y`, the log with `esc` back, and Browse with
+local `file://` lists: its sections, a `#tag` filter, installing from it,
+adding a list (the warning, only `y`), a list that fails keeping its copy,
+removing one. Its data directory is its own, with this checkout as the hako
+there, so it never tests the hako ranma cloned.
 `SHOW=1 tests/e2e.sh` prints the screen as it is drawn.
 
 CI (`.github/workflows/ci.yml`) runs it against the latest ranma release on

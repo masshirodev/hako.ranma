@@ -1,0 +1,427 @@
+# hako's Browse and plugin lists, cell for cell (PLUGIN_BROWSER_screen.js, default theme).
+## Browse · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Available ─────────────────────────── 45 │
+│  4   "masshirodev/history.ranma", │ › agents.ranma                           ┃
+│  5   "masshirodev/notes.ranma",   │   blame.ranma unreviewed                 ┃
+│  6   { import = "plugins" },      │   gitbar.ranma                           ┃
+│  7 }                              │   lazygit.ranma                          ┃
+│  8                                │   linkhover.ranma                        │
+│  9 ranma.set { border = "rounded" │   openpath.ranma                         │
+│ 10                                │   pomodoro.ranma unreviewed              │
+│ 11 ranma.bar {                    │   sessions.ranma                         │
+│ 12   left = { "mode", "workspaces"│   tidy.ranma unreviewed                  │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Every coding agent in your panes: which  │
+│~                                  │ are working, which need you.             │
+│~                                  │ from ranma plugins                       │
+│~                                  │ needs kizuna · ranma 0.1.0 or newer      │
+│~                                  │ masshirodev/agents.ranma                 │
+│~                                  │ tags ai, agents                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ i install  a add list  C fetch  ? keys   │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## Browse · 200×50 · rounded
+╭ 1 nvim ──────────────────────────────────────────────────────────────────────────────────────────────╮╭─ hako ───────────────┬───────────────────────────────────────────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua                                                                       ││ Groups               │ / filter                                          browse · 51 plugins │
+│  2 require("hako").setup {                                                                           │├──────────────────────┼───────────────────────────────────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",                                                                       ││   Not installed    1 │ Not installed ───────────────────────────────────────────────────── 1 │
+│  4   "masshirodev/history.ranma",                                                                    ││ › Available       45 │   notes.ranma               A scratch note for each works…  ○ missing │
+│  5   "masshirodev/notes.ranma",                                                                      ││   Needs a newe…    1 │ Available ──────────────────────────────────────────────────────── 45 │
+│  6   { import = "plugins" },                                                                         ││   Installed        4 │   agents.ranma              Every coding agent in your panes: whic…   │
+│  7 }                                                                                                 ││   Lists            2 │   blame.ranma unreviewed    git blame for the line under the point…   │
+│  8                                                                                                   ││                      │   gitbar.ranma              The focused pane's branch, ahead/behin…   │
+│  9 ranma.set { border = "rounded" }                                                                  ││                      │   lazygit.ranma             lazygit in a popup, opened on the focu…   │
+│ 10                                                                                                   ││                      │   linkhover.ranma           Hover a link or a path in any pane to …   │
+│ 11 ranma.bar {                                                                                       ││                      │ › openpath.ranma            Open the path under the pointer: files…   │
+│ 12   left = { "mode", "workspaces" },                                                                ││                      │   pomodoro.ran… unreviewed  A 25-minute timer in the bar, and a to…   │
+│ 13   right = { "hako", "cpu", "mem", "clock" },                                                      ││                      │   sessions.ranma            Save each workspace's layout and direc…   │
+│ 14 }                                                                                                 ││                      │   tidy.ranma unreviewed     Closes panes whose program exited, a m…   │
+│~                                                                                                     ││                      │   … 36 more, to the end of the alphabet                               │
+│~                                                                                                     ││                      │ Needs a newer ranma ─────────────────────────────────────────────── 1 │
+│~                                                                                                     ││                      │   float.ranma               Any pane as a floating wind…  needs 0.2.0 │
+│~                                                                                                     ││                      │ Installed ───────────────────────────────────────────────────────── 4 │
+│~                                                                                                     ││                      │   clock.ranma               A clock for the bar, in any…  ● installed │
+│~                                                                                                     ││                      │   compose.ranma             Write a long command or pro…  ● installed │
+│~                                                                                                     ││                      │   history.ranma             Search a pane's scrollback …  ● installed │
+│~                                                                                                     ││                      │   marks.ranma               Mark a spot in a pane's scr…  ● installed │
+│~                                                                                                     ││                      │ Lists ───────────────────────────────────────────────────────────── 2 │
+│~                                                                                                     ││                      │   ranma plugins official    raw.githubusercontent.com/ma…  38 plugins │
+│~                                                                                                     ││                      │   yuzu's plugins            raw.githubusercontent.com/yu…  14 plugins │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     ││                      │                                                                       │
+│~                                                                                                     │├──────────────────────┴───────────────────────────────────────────────────────────────────────┤
+│~                                                                                                     ││                        Open the path under the pointer: files in nvim, folders in yazi.      │
+│~                                                                                                     ││                        from ranma plugins and yuzu's plugins                                 │
+│~                                                                                                     ││                        needs nvim, yazi · ranma 0.1.0 or newer                               │
+│~                                                                                                     ││                        masshirodev/openpath.ranma · by masshirodev                           │
+│~                                                                                                     ││                        tags navigation, files                                                │
+│~                                                                                                     ││                                                                                              │
+│~                                                                                                     ││                                                                                              │
+│~                                                                                                     ││                                                                                              │
+│~                                                                                                     │├──────────────────────────────────────────────────────────────────────────────────────────────┤
+│ NORMAL  init.lua                                                                                     ││                        i install  a add list  C fetch  / filter  tab next group  ? keys      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────╯╰─────────────────────────────────────────────────────────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                                                                                                                                                       cpu 12%  mem 41%  16:36
+## ? keys in Browse · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├─╭─ keys ───────────────────────────────╮─┤
+│  3   "masshirodev/hako.ranma",    │ │ i        install it                  │ │
+│  4   "masshirodev/history.ranma", │ │ t        turn a list off · on   list │ ┃
+│  5   "masshirodev/notes.ranma",   │ │ x        remove a list (asks)   list │ ┃
+│  6   { import = "plugins" },      │ │ a        add a list: its URL         │ ┃
+│  7 }                              │ │ C        fetch every list again      │ ┃
+│  8                                │ │ B        the installed view          │ │
+│  9 ranma.set { border = "rounded" │ │ o        its options in settings     │ │
+│ 10                                │ │ ranma ────────────────────────────── │ │
+│ 11 ranma.bar {                    │ │ ↑↓ j k   move                        │ │
+│ 12   left = { "mode", "workspaces"│ │ tab      next group                  │ │
+│ 13   right = { "hako", "cpu", "mem├─│ /        filter: words or #tag       │─┤
+│ 14 }                              │ │ space    peek at the panes           │ │
+│~                                  │ │ esc      back                        │ │
+│~                                  │ ╰─ any key ────────────────────────────╯ │
+│~                                  │ needs kizuna · ranma 0.1.0 or newer      │
+│~                                  │ masshirodev/agents.ranma                 │
+│~                                  │ tags ai, agents                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ i install  a add list  C fetch  ? keys   │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## the installed view: where B is · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter                       6 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Not installed ──────────────────────── 1 │
+│  4   "masshirodev/history.ranma", │ › notes.ranma                  ○ missing │
+│  5   "masshirodev/notes.ranma",   │ Installed ──────────────────────────── 5 │
+│  6   { import = "plugins" },      │   clock.ranma                    ● 0.2ms │
+│  7 }                              │   compose.ranma                  ● 0.3ms │
+│  8                                │   hako.ranma                     ● 0.6ms │
+│  9 ranma.set { border = "rounded" │   history.ranma                  ● 0.4ms │
+│ 10                                │   marks.ranma                    ● 0.5ms │
+│ 11 ranma.bar {                    │                                          │
+│ 12   left = { "mode", "workspaces"│   B browses 46 more, from 2 lists.       │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Declared, not cloned yet: i installs it, │
+│~                                  │ and so does the next sync.               │
+│~                                  │ github.com/masshirodev/notes.ranma       │
+│~                                  │ from init.lua:5                          │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ i/I install  x remove  B browse  ? keys  │
+╰───────────────────────────────────╰────────────────── o options · esc close ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## the first open: fetching the lists · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ──────────────────── fetching 0/1 ─╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter                          browse │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Lists ──────────────────────────────── 1 │
+│  4   "masshirodev/history.ranma", │ › ranma plugins official      fetch 0:01 │
+│  5   "masshirodev/notes.ranma",   │                                          │
+│  6   { import = "plugins" },      │   Fetching the official list. Its        │
+│  7 }                              │   plugins show here as soon as it lands. │
+│  8                                │                                          │
+│  9 ranma.set { border = "rounded" │                                          │
+│ 10                                │                                          │
+│ 11 ranma.bar {                    │                                          │
+│ 12   left = { "mode", "workspaces"│                                          │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ $ curl -fsSL --max-time 10               │
+│~                                  │   raw.githubusercontent.com/masshirodev/ │
+│~                                  │ first fetch · then every 6 hours         │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ a add list  C fetch  ? keys              │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## lists that could not be fetched · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ─────────────────── 1 list failed ─╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Lists ──────────────────────────────── 3 ┃
+│  4   "masshirodev/history.ranma", │   ranma plugins official      38 plugins ┃
+│  5   "masshirodev/notes.ranma",   │ › yuzu's plugins            ✗ 3 days old ┃
+│  6   { import = "plugins" },      │   kenji's plugins              ✗ no copy ┃
+│  7 }                              │ Not installed ──────────────────────── 1 │
+│  8                                │   notes.ranma                  ○ missing │
+│  9 ranma.set { border = "rounded" │ Available ─────────────────────────── 45 │
+│ 10                                │   agents.ranma                           │
+│ 11 ranma.bar {                    │   blame.ranma unreviewed                 │
+│ 12   left = { "mode", "workspaces"│   gitbar.ranma                           │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ curl: (6) Could not resolve host: raw.gi │
+│~                                  │ Showing its copy from 3 days ago (Oct 8, │
+│~                                  │ 14 plugins). C tries again.              │
+│~                                  │ tried 1m ago · fetched 3 days ago        │
+│~                                  │ https://raw.githubusercontent.com/yuzu-… │
+│~                                  │                                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ t turn off  x remove  a add list  ? keys │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## one plugin, two lists · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Available ─────────────────────────── 45 │
+│  4   "masshirodev/history.ranma", │   agents.ranma                           ┃
+│  5   "masshirodev/notes.ranma",   │   blame.ranma unreviewed                 ┃
+│  6   { import = "plugins" },      │   gitbar.ranma                           ┃
+│  7 }                              │   lazygit.ranma                          ┃
+│  8                                │   linkhover.ranma                        │
+│  9 ranma.set { border = "rounded" │ › openpath.ranma                         │
+│ 10                                │   pomodoro.ranma unreviewed              │
+│ 11 ranma.bar {                    │   sessions.ranma                         │
+│ 12   left = { "mode", "workspaces"│   tidy.ranma unreviewed                  │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Open the path under the pointer: files   │
+│~                                  │ in nvim, folders in yazi.                │
+│~                                  │ from ranma plugins and yuzu's plugins    │
+│~                                  │ needs nvim, yazi · ranma 0.1.0 or newer  │
+│~                                  │ masshirodev/openpath.ranma               │
+│~                                  │ tags navigation, files                   │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ i install  a add list  C fetch  ? keys   │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## a plugin from a list nobody reviews · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Available ─────────────────────────── 45 │
+│  4   "masshirodev/history.ranma", │   agents.ranma                           ┃
+│  5   "masshirodev/notes.ranma",   │   blame.ranma unreviewed                 ┃
+│  6   { import = "plugins" },      │   gitbar.ranma                           ┃
+│  7 }                              │   lazygit.ranma                          ┃
+│  8                                │   linkhover.ranma                        │
+│  9 ranma.set { border = "rounded" │   openpath.ranma                         │
+│ 10                                │   pomodoro.ranma unreviewed              │
+│ 11 ranma.bar {                    │   sessions.ranma                         │
+│ 12   left = { "mode", "workspaces"│ › tidy.ranma unreviewed                  │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Closes panes whose program exited, a     │
+│~                                  │ minute after it did.                     │
+│~                                  │ from yuzu's plugins · nobody reviews it  │
+│~                                  │ needs ranma 0.1.0 or newer               │
+│~                                  │ yuzu-dev/tidy.ranma · by yuzu-dev        │
+│~                                  │ tags panes                               │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ i install  a add list  C fetch  ? keys   │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## needs a newer ranma · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Needs a newer ranma ────────────────── 1 │
+│  4   "masshirodev/history.ranma", │ › float.ranma                needs 0.2.0 │
+│  5   "masshirodev/notes.ranma",   │ Installed ──────────────────────────── 4 │
+│  6   { import = "plugins" },      │   clock.ranma                ● installed │
+│  7 }                              │   compose.ranma              ● installed │
+│  8                                │   history.ranma              ● installed │
+│  9 ranma.set { border = "rounded" │   marks.ranma                ● installed ┃
+│ 10                                │ Lists ──────────────────────────────── 2 ┃
+│ 11 ranma.bar {                    │   ranma plugins official      38 plugins ┃
+│ 12   left = { "mode", "workspaces"│   yuzu's plugins              14 plugins ┃
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Needs ranma 0.2.0; this one is 0.1.0.    │
+│~                                  │ Any pane as a floating window, moved an… │
+│~                                  │ from ranma plugins                       │
+│~                                  │ needs ranma 0.2.0 or newer               │
+│~                                  │ masshirodev/float.ranma · by masshirodev │
+│~                                  │ tags ui, panes                           │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ a add list  C fetch  ? keys              │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## i: installing from Browse · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ────────────────── installing 1/1 ─╮
+│  1 -- lua/plugins/agents.lua      │ / filter             browse · 51 plugins │
+│  2 -- written by hako, from ranma ├──────────────────────────────────────────┤
+│  3 -- yours to edit               │ Available ─────────────────────────── 45 │
+│  4 return {                       │ › agents.ranma new         clone ━━━●─── ┃
+│  5   "masshirodev/agents.ranma",  │   blame.ranma unreviewed                 ┃
+│  6 }                              │   gitbar.ranma                           ┃
+│~                                  │   lazygit.ranma                          ┃
+│~                                  │   linkhover.ranma                        │
+│~                                  │   openpath.ranma                         │
+│~                                  │   pomodoro.ranma unreviewed              │
+│~                                  │   sessions.ranma                         │
+│~                                  │   tidy.ranma unreviewed                  │
+│~                                  ├──────────────────────────────────────────┤
+│~                                  │ Cloning into '.part-agents.ranma'...     │
+│~                                  │ remote: Enumerating objects: 214, done.  │
+│~                                  │ Receiving objects:  45% (97/214)         │
+│~                                  │ needs kizuna                             │
+│~                                  │ github.com/masshirodev/agents.ranma      │
+│~                                  │ from lua/plugins/agents.lua:1            │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  agents.lua                │ enter open  a add list  C fetch  ? keys  │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## /#git: a tag · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / #git                  browse · 3 of 51 │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Available ──────────────────────────── 3 │
+│  4   "masshirodev/history.ranma", │   blame.ranma unreviewed                 │
+│  5   "masshirodev/notes.ranma",   │ › gitbar.ranma                           │
+│  6   { import = "plugins" },      │   lazygit.ranma                          │
+│  7 }                              │                                          │
+│  8                                │                                          │
+│  9 ranma.set { border = "rounded" │                                          │
+│ 10                                │                                          │
+│ 11 ranma.bar {                    │                                          │
+│ 12   left = { "mode", "workspaces"│                                          │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ The focused pane's branch, ahead/behind  │
+│~                                  │ and dirty files, in the bar.             │
+│~                                  │ from ranma plugins                       │
+│~                                  │ needs ranma 0.1.0 or newer               │
+│~                                  │ masshirodev/gitbar.ranma                 │
+│~                                  │ tags git, bar                            │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ i install  a add list  C fetch  ? keys   │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## /gti: nothing matches · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / gti                   browse · 0 of 51 │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │   No plugin matches gti.                 │
+│  4   "masshirodev/history.ranma", │                                          │
+│  5   "masshirodev/notes.ranma",   │   Words match names, descriptions and    │
+│  6   { import = "plugins" },      │   authors; #tag matches a tag:           │
+│  7 }                              │   #git #ai #ui #navigation #files #bar   │
+│  8                                │   #panes #search #sessions #time         │
+│  9 ranma.set { border = "rounded" │                                          │
+│ 10                                │                                          │
+│ 11 ranma.bar {                    │                                          │
+│ 12   left = { "mode", "workspaces"│                                          │
+│ 13   right = { "hako", "cpu", "mem│                                          │
+│ 14 }                              │                                          │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ a add list  C fetch  ? keys              │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## every list turned off · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────────────────╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter              browse · 0 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Lists ──────────────────────────────── 2 │
+│  4   "masshirodev/history.ranma", │ › ranma plugins official           – off │
+│  5   "masshirodev/notes.ranma",   │   yuzu's plugins                   – off │
+│  6   { import = "plugins" },      │                                          │
+│  7 }                              │   Every list is off: nothing to browse.  │
+│  8                                │   t turns one on.                        │
+│  9 ranma.set { border = "rounded" │                                          │
+│ 10                                │                                          │
+│ 11 ranma.bar {                    │                                          │
+│ 12   left = { "mode", "workspaces"│                                          │
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Off: its plugins are not in Browse. t    │
+│~                                  │ turns it on again.                       │
+│~                                  │ 38 plugins · fetched 12m ago             │
+│~                                  │ https://raw.githubusercontent.com/massh… │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ t turn on  a add list  C fetch  ? keys   │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## a: typing a list's URL · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ──────────────────────── add list ─╮
+│  1 -- ~/.config/ranma/init.lua    │ + https://kenji.dev/ranma/plugins.json   │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Needs a newer ranma ────────────────── 1 │
+│  4   "masshirodev/history.ranma", │   float.ranma                needs 0.2.0 │
+│  5   "masshirodev/notes.ranma",   │ Installed ──────────────────────────── 4 │
+│  6   { import = "plugins" },      │   clock.ranma                ● installed │
+│  7 }                              │   compose.ranma              ● installed │
+│  8                                │   history.ranma              ● installed │
+│  9 ranma.set { border = "rounded" │   marks.ranma                ● installed ┃
+│ 10                                │ Lists ──────────────────────────────── 2 ┃
+│ 11 ranma.bar {                    │   ranma plugins official      38 plugins ┃
+│ 12   left = { "mode", "workspaces"│ › yuzu's plugins              14 plugins ┃
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ A list's URL: one JSON file.             │
+│~                                  │ enter fetches it and shows what it       │
+│~                                  │ holds; nothing is added yet.             │
+│~                                  │ then writes hako-lists.json              │
+│~                                  │                                          │
+│~                                  │                                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ enter fetch  esc cancel  ctrl+u clear    │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## a: the ask before adding · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ─────────────────────── add list? ─╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Needs a newer ranma ────────────────── 1 │
+│  4   "masshirodev/history.ranma", │   float.ranma                needs 0.2.0 │
+│  5   "masshirodev/notes.ranma",   │ Installed ──────────────────────────── 4 │
+│  6   { import = "plugins" },      │   clock.ranma                ● installed │
+│  7 }                              │   compose.ranma              ● installed │
+│  8                                │   history.ranma              ● installed │
+│  9 ranma.set { border = "rounded" │   marks.ranma                ● installed ┃
+│ 10                                │ Lists ──────────────────────────────── 2 ┃
+│ 11 ranma.bar {                    │   ranma plugins official      38 plugins ┃
+│ 12   left = { "mode", "workspaces"│ › yuzu's plugins              14 plugins ┃
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Add the list kenji's plugins?            │
+│~                                  │ 9 plugins · kenji.dev/ranma/plugins.json │
+│~                                  │ Nobody reviews this list. Its plugins    │
+│~                                  │ are Lua that runs as you: they can read  │
+│~                                  │ your files and run any program. Add it   │
+│~                                  │ only if you trust who keeps it.          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ y add it  esc cancel                     │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36
+## x: removing a list · 80×24 · rounded
+╭ 1 nvim ───────────────────────────╭─ hako ───────────────────────── remove? ─╮
+│  1 -- ~/.config/ranma/init.lua    │ / filter             browse · 51 plugins │
+│  2 require("hako").setup {        ├──────────────────────────────────────────┤
+│  3   "masshirodev/hako.ranma",    │ Needs a newer ranma ────────────────── 1 │
+│  4   "masshirodev/history.ranma", │   float.ranma                needs 0.2.0 │
+│  5   "masshirodev/notes.ranma",   │ Installed ──────────────────────────── 4 │
+│  6   { import = "plugins" },      │   clock.ranma                ● installed │
+│  7 }                              │   compose.ranma              ● installed │
+│  8                                │   history.ranma              ● installed │
+│  9 ranma.set { border = "rounded" │   marks.ranma                ● installed ┃
+│ 10                                │ Lists ──────────────────────────────── 2 ┃
+│ 11 ranma.bar {                    │   ranma plugins official      38 plugins ┃
+│ 12   left = { "mode", "workspaces"│ › yuzu's plugins deletes      14 plugins ┃
+│ 13   right = { "hako", "cpu", "mem├──────────────────────────────────────────┤
+│ 14 }                              │ Remove yuzu's plugins?                   │
+│~                                  │ Its 14 plugins leave Browse. What you    │
+│~                                  │ installed from it stays installed, and   │
+│~                                  │ updates from its own repository.         │
+│~                                  │ edits hako-lists.json                    │
+│~                                  │                                          │
+│~                                  ├──────────────────────────────────────────┤
+│ NORMAL  init.lua                  │ y remove  esc keep it                    │
+╰───────────────────────────────────╰─────────────────── o options · esc back ─╯
+ HAKO    1:code  2:web  3                               cpu 12%  mem 41%  16:36

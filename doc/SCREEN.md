@@ -49,6 +49,7 @@ moment something fails.
 | `C` | check every plugin for updates | the screen |
 | `S` | sync: install and update (asks first if it would delete) | the screen |
 | `a` | add: type `owner/repo` or a URL | the screen |
+| `B` | Browse: plugins from lists (below) | the screen |
 | `l` | the log of what updates brought | most rows |
 | `b` | run its build again | a failed build |
 | `e` | the file at the error's line, in a pane | a failed load, a refused spec |
@@ -61,6 +62,40 @@ go are marked `deletes`, and only `y` answers (`esc` keeps everything). A
 plugin declared in a file of its own (`lua/plugins/x.lua`) is removed with
 that file; one declared in `init.lua` gets an explanation instead, since hako
 never rewrites `init.lua`, and `e` opens it at the line.
+
+## Browse
+
+`B` pushes Browse over the list: from the design handoff
+`doc/handoffs/PLUGIN_BROWSER_MOCK.txt` (with `PLUGIN_BROWSER_screen.js`, which
+draws it; the brief is `doc/briefs/done/PLUGIN_BROWSER.md`). `esc`, or `B`
+again, comes back. `lua/hako/browse.lua` builds it; `lua/hako/lists.lua` reads
+and fetches the lists (`doc/LISTS.md`).
+
+| Section | What is in it |
+| --- | --- |
+| Not installed | declared in your specs, not cloned (`○ missing`; `i` installs it) |
+| Available | in a list, not declared (`i` writes its spec and installs it) |
+| Needs a newer ranma | its `ranma` is newer than the one running (`needs 0.2.0`; no `i`) |
+| Installed | declared and cloned (`● installed`; `B` goes to the installed view) |
+| Lists | each list: its plugin count, `fetch 0:01`, `✗ 3d old` (failed, its copy shown), `✗ no copy`, `– off` |
+
+The lists go first while one needs you (a failed fetch, or the first one), as
+Failed does in the installed view. While `/` holds a filter they go, and the
+sections stay. A plugin from a list that is not the official one is marked
+`unreviewed`, and its detail says "nobody reviews it".
+
+| Key | Does | On |
+| --- | --- | --- |
+| `i` | install it | an available or not-installed plugin |
+| `t` | turn a list off · on | a list |
+| `x` | remove a list (asks; not the official one) | a list |
+| `a` | add a list: its URL, fetched and shown, then a warning only `y` answers | Browse |
+| `C` | fetch every list again | Browse |
+| `B` | the installed view | Browse, an installed plugin |
+| `/` | filter: words (name, description, author) and `#tag` | Browse |
+
+Installing writes the spec file, ranma reloads, and hako opens again in
+Browse on that row, where the clone runs as a meter.
 
 ## Where it departs from the handoff
 
@@ -98,6 +133,29 @@ never rewrites `init.lua`, and `e` opens it at the line.
 - **Paths and the bootstrap**: clones are in `~/.local/share/ranma/hako/`, the
   lockfile is `hako-lock.json`, and the bootstrap is `ranma.packadd` plus a
   background `git clone` (the handoff drew it with stand-in calls).
+
+## Where Browse departs from its handoff
+
+- **The plugins and the numbers** are the handoff's own (gitbar, float,
+  pomodoro, "51 plugins"): Browse shows what the lists hold. "… 36 more, to
+  the end of the alphabet" is the mock shortening a long list; Browse lists
+  every plugin, and the list scrolls.
+- **The status** in Browse is about lists and installs (`fetching 0/1`,
+  `1 list failed`, `installing 1/1`), never a plugin that failed to load: that
+  is the installed view's to say. The mock drew one of each, never both.
+- **The bottom edge** says `esc back`, not `o options · esc back`: ranma draws
+  every pushed view that way (the plugin manager's log, compared with its own
+  handoff cell for cell, too). `o` works there all the same, and the keys
+  card says so.
+- **A list entry without `ranma`** says nothing about ranma's version. The
+  handoff gave every plugin one, so it always drew "ranma 0.1.0 or newer".
+- **Fetching** happens when Browse opens (for lists older than
+  `hako.check_hours`) and on `C`, not every 6 hours in the background as the
+  first-fetch detail suggests: nothing asks for a list until Browse opens.
+- **The installed view's detail** is 6 rows, as this handoff draws it (the
+  plugin manager's had 5).
+- **On a ranma from before 2026-10-11**, whose pushed views take no filter of
+  the plugin's own, `/` in Browse matches names only.
 
 ## Not done yet
 

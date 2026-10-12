@@ -107,3 +107,29 @@ A reload closes a plugin's screen (its Lua is gone), and every install and
 update reloads. So hako leaves a note in its store before it reloads (or
 before a save it caused does), and opens the screen again when it loads, on
 the row a key last acted on: ranma does not tell Lua which row is selected.
+
+## Browse and plugin lists
+
+ranma is too new for Neovim's way of finding plugins (blog posts, dotfiles,
+awesome-lists): a new user does not know they exist. So hako browses
+**plugin lists**, Dalamud's plugin repositories in shape: one JSON file at a
+URL, an official one, and any others a user adds. The design came from a
+handoff (`doc/SCREEN.md`, "Browse"); `doc/LISTS.md` is the format.
+
+- **A file at a URL, fetched with curl**, not a git repository: a list is
+  data, often one file in a repository that holds other things, and curl
+  fetches a raw file from anywhere (and `file://` for the tests).
+- **Strict, like everything ranma reads.** An unknown field refuses the list
+  by name; a newer `format` says "update hako" instead of being half read. A
+  list that does not read keeps its last good copy in Browse.
+- **Adding a list asks, and says why.** A plugin is Lua that runs as you;
+  only the official list is reviewed. The ask comes after the list is
+  fetched, so it can say what is in it, and only `y` answers.
+- **Installing is `add`**: the spec file is the record of what you chose,
+  in your config, editable; Browse writes nothing else. Removing a list
+  leaves its plugins installed.
+- **`hako-lists.json` is written only when you change it**, beside the
+  lockfile and configurable like it, so it can live in dotfiles.
+- **The words are plain English** ("Browse", "plugin lists"): `hako` and
+  `ranma` are names, but a word you have to read to understand what something
+  does should not need a dictionary.

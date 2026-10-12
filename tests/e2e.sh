@@ -18,7 +18,9 @@ SOCK=hako-e2e-$$
 T() { tmux -L "$SOCK" "$@"; }
 ENVV=(env -u SSH_CONNECTION -u SSH_TTY -u SSH_CLIENT -u RANMA -u RANMA_SOCKET -u RANMA_PANE -u TMUX
   "XDG_RUNTIME_DIR=$RT" "XDG_CACHE_HOME=$WORK/cache" "XDG_STATE_HOME=$STATE"
+  "XDG_DATA_HOME=$WORK/data"
   "RANMA_CONFIG_DIR=$CFG" RANMA_NO_UPDATE_CHECK=1 SHELL=/bin/bash
+  "HAKO_OFFICIAL_LIST=file://$WORK/official.json"
   GIT_CONFIG_GLOBAL=/dev/null GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t
   GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t)
 
@@ -69,6 +71,11 @@ repo plain.ranma 'plugin/plain.lua=ranma.option("plain.n", { type = "int", defau
 repo gamma.ranma 'plugin/gamma.lua=ranma.option("gamma.n", { type = "int", default = 3 })'
 
 mkdir -p "$CFG/lua/plugins" "$ROOT"
+# ranma puts the hako in its data directory on require's path before init.lua
+# runs, so that one is this checkout: otherwise require("hako") finds the
+# copy ranma cloned from GitHub, and the test tests that.
+mkdir -p "$WORK/data/ranma/hako"
+ln -s "$HAKO" "$WORK/data/ranma/hako/hako.ranma"
 cat > "$CFG/init.lua" <<EOF
 assert(ranma.packadd("$HAKO"))
 require("hako").setup({
@@ -209,5 +216,66 @@ T send-keys -t s Escape
 wait_screen "Not in spec" "esc comes back to the list"
 scr | grep -q "hako" || fail "esc closed the screen instead of going back"
 ok "l: the log, and esc back to the list"
+
+# 7. Browse: plugins from lists. The official list is a local file here
+#    (HAKO_OFFICIAL_LIST), and so is the one added with a.
+repo zeta.ranma 'plugin/zeta.lua=ranma.option("zeta.n", { type = "int", default = 4 })'
+repo eta.ranma 'plugin/eta.lua=ranma.option("eta.n", { type = "int", default = 8 })'
+cat > "$WORK/official.json" <<JSON
+{ "format": 1, "name": "ranma plugins", "plugins": [
+  { "repo": "file://$SRC/zeta.ranma", "description": "Zeta: a plugin to install.", "author": "t", "tags": ["git", "bar"] },
+  { "repo": "file://$SRC/plain.ranma", "description": "Plain: declared and installed.", "author": "t", "tags": ["bar"] },
+  { "repo": "file://$SRC/far.ranma", "description": "Far: needs a ranma from the future.", "author": "t", "ranma": "9.0.0" }
+] }
+JSON
+cat > "$WORK/third.json" <<JSON
+{ "format": 1, "name": "kenji's plugins", "plugins": [
+  { "repo": "file://$SRC/eta.ranma", "description": "Eta: from a list nobody reviews.", "author": "kenji" }
+] }
+JSON
+out=$(RL 'require("hako").browse()') || fail "browse: $out"
+wait_screen "browse · 3 plugins" "Browse opens and the official list lands"
+wait_screen "Available" "an available plugin has its section"
+wait_screen "needs 9.0.0" "a plugin for a newer ranma says so"
+wait_screen "● installed" "a declared, installed plugin says so"
+wait_screen "Lists" "the lists are under the plugins"
+if [ -n "${SHOW:-}" ]; then scr; fi
+ok "Browse: the official list's plugins, by what each is to you"
+T send-keys -t s / '#git'
+wait_screen "browse · 1 of 3" "a #tag filters"
+scr | grep -q "Lists" && fail "the lists stayed while a filter stands"
+ok "Browse: /#git keeps the tagged plugin, and the lists go"
+T send-keys -t s Enter i
+until_lua 'return ranma.get("zeta.n") == 4' "i installs from Browse"
+grep -q "from ranma plugins" "$CFG/lua/plugins/zeta.lua" || fail "the spec file does not say which list: $(cat "$CFG/lua/plugins/zeta.lua")"
+wait_screen "browse ·" "hako comes back to Browse after the reload"
+ok "i: the spec written (from its list), installed, back in Browse"
+T send-keys -t s a
+wait_screen "add list" "a asks for a list's URL"
+T send-keys -t s "file://$WORK/third.json" Enter
+wait_screen "add list?" "a fetched list asks before it is added"
+wait_screen "Nobody reviews this list" "the warning"
+T send-keys -t s u
+sleep 0.5
+grep -q third "$CFG/hako-lists.json" 2>/dev/null && fail "a key other than y added the list"
+T send-keys -t s y
+wait_screen " eta\.ranma" "the added list's plugin shows"
+wait_screen "unreviewed" "a plugin from it is marked unreviewed"
+grep -q third "$CFG/hako-lists.json" || fail "hako-lists.json does not have the list"
+ok "a: fetched, warned, y adds it to hako-lists.json"
+mv "$WORK/third.json" "$WORK/third.gone"
+T send-keys -t s C
+wait_screen "1 list failed" "a list that cannot be fetched says so"
+scr | grep -q ' eta\.ranma' || fail "the failed list's last copy is not shown"
+ok "C: a list that fails keeps its last copy"
+RL 'local l = require("hako.lists") for _, x in ipairs(l.read_config()) do if x.url:find("third") then l.remove(x.url) end end require("hako.screen").changed()' >/dev/null
+for _ in $(seq 1 20); do scr | grep -q ' eta\.ranma' || break; sleep 0.25; done
+scr | grep -q ' eta\.ranma' && fail "a removed list's plugins are still in Browse"
+scr | grep -q "list failed" && fail "the removed list's failure stayed in the status"
+grep -q third "$CFG/hako-lists.json" && fail "the removed list is still in hako-lists.json"
+ok "a removed list's plugins leave Browse"
+T send-keys -t s Escape
+wait_screen "B browses" "esc back to the installed view, which points at Browse"
+ok "esc: back to the installed view"
 
 echo "hako e2e: ok"

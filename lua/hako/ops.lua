@@ -563,7 +563,7 @@ end
 
 -- Write lua/<import>/<name>.lua with the spec; saving it reloads ranma, which
 -- installs it. Returns the plugin's name, or nil and why not.
-function M.add(src)
+function M.add(src, from)
   src = (src or ""):gsub("^%s+", ""):gsub("%s+$", "")
   if src == "" then return nil, "give owner/repo or a URL" end
   local dir = state.imports[1]
@@ -573,7 +573,8 @@ function M.add(src)
   local file = dir .. "/" .. spec.main_of(name) .. ".lua"
   if util.exists(file) then return nil, util.tilde(file) .. " exists" end
   os.execute("mkdir -p " .. util.quote(dir))
-  local ok, err = util.write(file, "-- " .. util.tilde(file) .. "\n-- written by hako; yours to edit\nreturn {\n  "
+  local by = from and ("-- written by hako, from " .. from .. ";\n-- yours to edit") or "-- written by hako; yours to edit"
+  local ok, err = util.write(file, "-- " .. util.tilde(file) .. "\n" .. by .. "\nreturn {\n  "
     .. string.format("%q", src) .. ",\n}\n")
   if not ok then return nil, tostring(err) end
   store():set("added", name)
