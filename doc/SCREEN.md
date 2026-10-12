@@ -50,7 +50,7 @@ moment something fails.
 | `S` | sync: install and update (asks first if it would delete) | the screen |
 | `a` | add: type `owner/repo` or a URL | the screen |
 | `B` | Browse: plugins from lists (below) | the screen |
-| `l` | the log of what updates brought | most rows |
+| `l` | the log of what updates brought, one group per plugin (all its updates of the last 7 days together) | most rows |
 | `b` | run its build again | a failed build |
 | `e` | the file at the error's line, in a pane | a failed load, a refused spec |
 | `enter` | its directory in a new pane | local, not managed, working, strays |

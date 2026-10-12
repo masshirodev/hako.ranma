@@ -685,9 +685,27 @@ end
 -- `l`: what updates brought in the last 7 days, over the list.
 function show_log()
   local week = os.time() - 7 * 86400
-  local b, plugins = {}, 0
+  -- One group per plugin, however many updates it had: its commits
+  -- together, newest first, from where the oldest update started to where
+  -- the newest ended. (One heading per update listed hako six times.)
+  local by, order = {}, {}
   for _, e in ipairs(ops.history()) do
     if e.time >= week and #e.commits > 0 then
+      local g = by[e.name]
+      if not g then
+        g = { name = e.name, from = e.from, to = e.to, first = e.time, last = e.time, commits = {} }
+        by[e.name] = g
+        order[#order + 1] = g
+      end
+      if e.time > g.last then g.to, g.last = e.to, e.time end
+      if e.time < g.first then g.from, g.first = e.from, e.time end
+      for _, c in ipairs(e.commits) do g.commits[#g.commits + 1] = c end
+    end
+  end
+  local b, plugins = {}, 0
+  for _, e in ipairs(order) do
+    table.sort(e.commits, function(x, y) return (x.time or 0) > (y.time or 0) end)
+    do
       plugins = plugins + 1
       b[#b + 1] = { "heading", e.name, tag = (e.from or ""):sub(1, 7) .. " → " .. (e.to or ""):sub(1, 7), count = #e.commits }
       local p = state.by_name[e.name]
