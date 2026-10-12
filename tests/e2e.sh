@@ -168,9 +168,14 @@ ok "clean: deletes what nothing declares, only that"
 #     clears it away.
 mkdir -p "$ROOT/.part-half.ranma/plugin"
 echo 'error("a half-made clone was loaded")' > "$ROOT/.part-half.ranma/plugin/half.lua"
+touch -d '-20 min' "$ROOT/.part-half.ranma"
+# A fresh one may be another server's clone, still going: it stays.
+mkdir -p "$ROOT/.part-busy.ranma.othr"
 "${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
 for _ in $(seq 1 40); do [ ! -e "$ROOT/.part-half.ranma" ] && break; sleep 0.25; done
 [ ! -e "$ROOT/.part-half.ranma" ] || fail "a leftover part dir was not cleared"
+[ -d "$ROOT/.part-busy.ranma.othr" ] || fail "a fresh part dir (another server's clone) was deleted"
+rm -rf "$ROOT/.part-busy.ranma.othr"
 RL 'for _, p in ipairs(require("hako").plugins()) do if p.name:find("half") then return "loaded" end end return "no"' | grep -q no || fail "a part dir was taken for a plugin"
 ok "a half-made clone is never a plugin, and is cleared on load"
 

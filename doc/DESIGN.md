@@ -77,6 +77,17 @@ what is still missing. Found the first time hako was switched on for real: a
 reload mid-install left half-cloned directories that the next load took as
 installed.
 
+**Every ranma server runs hako**, one per terminal, and they share its store
+(the pending installs among it): an install from Browse writes a spec file,
+both servers reload, and both clone the plugin. With one `.part-<name>`
+between them the second clone met the first's ("already exists", or git's
+own `BUG:` over refs), and the plugin, installed by the winner, showed as
+`✗ clone` (2026-10-11). So the part dir is `.part-<name>.<token>`, a token per
+Lua state; a clone first looks whether the plugin has landed, and a rename
+that finds it there counts as done. The load's cleanup deletes only part dirs
+older than ten minutes, since a newer one may be another server's clone in
+progress, and a clone failure whose plugin is installed after all is cleared.
+
 ## State that outlives a reload
 
 Lua starts over on every reload, and every update ends in one. Update counts,

@@ -168,11 +168,24 @@ end
 -- Where a clone is made before it is a plugin: a reload kills every job the
 -- old configuration started, and a half-made clone under the plugin's own
 -- name would load as if installed. Renamed into place only when done.
+-- This server's own: every ranma server (one per terminal) runs hako, and
+-- they share its store, so two of them can install one plugin at once. With
+-- one part dir between them, the second clone found the first's ("already
+-- exists") or git tripped over its refs. A token per Lua state keeps them
+-- apart; whichever lands first wins, and the other counts that as done.
+local TOKEN = string.format("%x", math.random(0, 0x7fffffff))
+
 local function part_dir(p)
-  return state.root .. "/.part-" .. p.name
+  return state.root .. "/.part-" .. p.name .. "." .. TOKEN
+end
+
+local function landed(p)
+  return util.is_dir(p.path) and util.git_head(p.path) ~= nil
 end
 
 local function install_one(p)
+  -- Another server installed it while this one was asked to.
+  if landed(p) then return true, { lock = locate(p), changed = true, result = { "✓ cloned", "normal" } } end
   local t = begin(p, "clone")
   -- The plugin as it is while being made: everything runs in the part dir.
   local q = setmetatable({ path = part_dir(p) }, { __index = p })
@@ -199,7 +212,14 @@ local function install_one(p)
   local built, f = build(q)
   if not built then return false, f end
   local moved, why = os.rename(q.path, p.path)
-  if not moved then return false, failure(t, "clone", nil, nil, "could not move it into place: " .. tostring(why)) end
+  if not moved then
+    if landed(p) then
+      -- Another server's clone got there first: the same plugin, done.
+      task.run({ "rm", "-rf", "--", q.path })
+    else
+      return false, failure(t, "clone", nil, nil, "could not move it into place: " .. tostring(why))
+    end
+  end
   return true, { lock = locate(p), changed = true, result = { "✓ cloned", "normal" } }
 end
 
@@ -624,17 +644,15 @@ function M.after_load()
   util.later(finish_landed)
   util.later(function()
     -- Clones a reload stopped half made: no job of this configuration is
-    -- making them, so they go, and the install below starts over the ones
-    -- that were asked for.
-    local parts = {}
-    for _, name in ipairs(util.ls(state.root)) do
-      if name:match("^%.part%-") then parts[#parts + 1] = state.root .. "/" .. name end
-    end
-    if #parts > 0 then
-      table.insert(parts, 1, "--")
-      table.insert(parts, 1, "-rf")
-      table.insert(parts, 1, "rm")
-      ranma.spawn(parts, { timeout = 60 })
+    -- making them. Only old ones, though: another server may be cloning
+    -- into a newer one right now (see part_dir).
+    ranma.spawn({ "find", state.root, "-maxdepth", "1", "-name", ".part-*", "-mmin", "+10",
+      "-exec", "rm", "-rf", "--", "{}", "+" }, { timeout = 60 })
+    -- A failed clone whose plugin is installed after all (another server
+    -- cloned it) is not a failure any more.
+    for name, f in pairs(M.failures()) do
+      local p = state.by_name[name]
+      if f.task == "clone" and p and p.installed then set_failure(name, nil) end
     end
     local missing, asked = {}, {}
     local wanted = pending()
