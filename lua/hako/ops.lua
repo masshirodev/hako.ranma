@@ -252,6 +252,15 @@ local function commits_between(p, from, to)
   return list
 end
 
+-- Updates a reload may stop: ranma watches every plugin directory and
+-- reloads when one changes, which a fast-forward does before this run can
+-- lock it (or build it). The next load finishes them (M.after_load).
+local function landing(name, v)
+  local all = store():get("landing") or {}
+  all[name] = v
+  store():set("landing", all)
+end
+
 local function update_one(p)
   if p.commit then return true, { result = { "– skipped", "dim" } } end
   local ok, info = check_one(p)
@@ -267,9 +276,14 @@ local function update_one(p)
     argv = { "git", "-C", p.path, "merge", "--ff-only", "--quiet", info.ref }
   end
   t.tail = { "$ " .. table.concat(argv, " ", 3) }
+  landing(p.name, { from = from, build = p.build ~= nil })
   ok, err, code = watched(t, argv)
-  if not ok then return false, failure(t, "pull", argv, code, err) end
+  if not ok then
+    landing(p.name, nil)
+    return false, failure(t, "pull", argv, code, err)
+  end
   local built, f = build(p)
+  landing(p.name, nil)
   if not built then return false, f end
   set_update(p.name, nil)
   local _, to = git(p, "rev-parse", "HEAD")
@@ -584,7 +598,30 @@ function M.add(src, from)
 end
 
 -- Once ranma has loaded: install what is missing, and check when it is time.
+-- Updates a reload stopped after the checkout moved: lock each where it is
+-- now, and run the build the reload cut off.
+local function finish_landed()
+  local all = store():get("landing") or {}
+  if next(all) == nil then return end
+  store():set("landing", nil)
+  local found, rebuild = {}, {}
+  for name, e in pairs(all) do
+    local p = state.by_name[name]
+    if p and p.installed then
+      local commit, branch = util.git_head(p.path)
+      if commit then
+        found[name] = { commit = commit, branch = branch, tag = p.tag }
+        set_update(name, nil)
+        if e.build and p.build then rebuild[#rebuild + 1] = name end
+      end
+    end
+  end
+  relock(found)
+  for _, name in ipairs(rebuild) do M.rebuild(name) end
+end
+
 function M.after_load()
+  util.later(finish_landed)
   util.later(function()
     -- Clones a reload stopped half made: no job of this configuration is
     -- making them, so they go, and the install below starts over the ones

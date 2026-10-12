@@ -146,6 +146,16 @@ for _ in $(seq 1 40); do [ "$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)" = "$ol
 [ "$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)" = "$old" ] || fail "restore did not go back to $old"
 ok "restore: back at the lockfile's commit"
 
+# 3b. An update a reload stopped after the checkout moved (ranma reloads as
+#     soon as a plugin's files change, which a fast-forward does before the
+#     run locks it): the next load locks it where it landed.
+git -C "$ROOT/alpha.ranma" merge -q --ff-only "$new"
+RL 'local s = require("hako.state").store local a = s:get("landing") or {} a["alpha.ranma"] = { build = false } s:set("landing", a)' >/dev/null
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+for _ in $(seq 1 40); do grep -q "$new" "$CFG/hako-lock.json" && break; sleep 0.25; done
+grep -q "$new" "$CFG/hako-lock.json" || fail "an update a reload stopped was not locked where it landed"
+ok "an update a reload stopped is locked on the next load"
+
 # 4. Clean.
 mkdir -p "$ROOT/stray.ranma"
 RL 'require("hako.ops").clean(true)' >/dev/null

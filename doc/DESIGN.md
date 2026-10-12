@@ -83,6 +83,15 @@ Lua starts over on every reload, and every update ends in one. Update counts,
 the last check's time and a task's failure live in `ranma.store("hako")`; the
 rest is rebuilt from the specs and the disk each time.
 
+A reload can also come in the middle of a run, from ranma itself: it watches
+every plugin's directory and reloads when one changes, and a fast-forward
+changes it before the run has locked the plugin or run its `build`. So an
+update leaves a note (`landing`) before it moves the checkout and clears it
+once it has built; the next load locks whatever is still noted where its
+checkout now is, and runs the build the reload cut off. Found when hako
+updating itself left the lock at the old commit (2026-10-11). Installs have
+the same kind of note (`pending`, above).
+
 ## The lockfile is the user's
 
 It defaults to the config directory, but the point of it is to sit in
