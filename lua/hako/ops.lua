@@ -358,7 +358,8 @@ local function reload()
 end
 
 -- Run `worker` over `plugins`; relock, report, reload when something that
--- loads changed. opts: quiet, summary(done, failed, results), after(changed).
+-- loads changed. opts: quiet, summary(done, failed, results), after(changed),
+-- start(plugins) once the run is sure to go.
 local function run(op, plugins, worker, opts)
   opts = opts or {}
   if state.run then
@@ -370,6 +371,7 @@ local function run(op, plugins, worker, opts)
     if opts.after then opts.after(0) end
     return
   end
+  if opts.start then opts.start(plugins) end
   state.results = {}
   state.run = { op = op, total = #plugins, done = 0, failed = 0 }
   local ok_screen, screen = pcall(require, "hako.screen")
@@ -448,12 +450,67 @@ function M.install(name, opts)
   end, opts)
 end
 
+-- Updates someone asked for and that have not finished. ranma reloads the
+-- moment a plugin's files change, so the first update to land stops the run
+-- and the plugins still waiting in it were never fetched, with nothing to
+-- say so. The next load takes them up again (M.after_load), each load
+-- landing at least one more.
+local function queued()
+  return store():get("queued") or {}
+end
+
+local function set_queued(name, on)
+  local all = queued()
+  all[name] = on or nil
+  store():set("queued", all)
+end
+
+local function queue(plugins)
+  local all = queued()
+  for _, p in ipairs(plugins) do
+    if p.installed then all[p.name] = true end
+  end
+  store():set("queued", all)
+end
+
+-- The screen closes with the Lua a reload stops: open it again after.
+local function keep_screen()
+  local ok, screen = pcall(require, "hako.screen")
+  if ok then screen.before_reload() end
+end
+
+-- A run that updates: what it was asked for is queued until each is done.
+local function queued_run(op, list, worker, opts)
+  opts = opts or {}
+  opts.start = function(ps)
+    queue(ps)
+    keep_screen()
+  end
+  local after = opts.after
+  opts.after = function(n)
+    if after then return after(n) end
+    if n > 0 then return reload() end
+    -- Nothing to reload for: the note to reopen the screen is not needed.
+    local ok, screen = pcall(require, "hako.screen")
+    if ok then screen.forget_reopen() end
+  end
+  run(op, list, function(p)
+    local ok, res = worker(p)
+    set_queued(p.name, nil)
+    return ok, res
+  end, opts)
+end
+
+local function update_list(list, opts)
+  queued_run("update", list, update_one, opts)
+end
+
 function M.update(name, opts)
   local list = {}
   for _, p in ipairs(managed(name)) do
     if p.installed then list[#list + 1] = p end
   end
-  run("update", list, update_one, opts)
+  update_list(list, opts)
 end
 
 -- The toast for a check: once per new commits, naming the key that opens
@@ -531,7 +588,7 @@ function M.sync(clean)
     for _, p in ipairs(managed()) do
     if not p.installed then set_pending(p.name, true) end
   end
-  run("sync", managed(), function(p)
+  queued_run("sync", managed(), function(p)
     local ok, res = sync_one(p)
     if ok then set_pending(p.name, nil) end
     return ok, res
@@ -654,6 +711,7 @@ local function finish_landed()
       if commit then
         found[name] = { commit = commit, branch = branch, tag = p.tag }
         set_update(name, nil)
+        set_queued(name, nil)
         if e.build and p.build then rebuild[#rebuild + 1] = name end
       end
     end
@@ -676,6 +734,17 @@ function M.after_load()
       local p = state.by_name[name]
       if f.task == "clone" and p and p.installed then set_failure(name, nil) end
     end
+    -- Updates a reload stopped go on once nothing is left to install: one
+    -- run at a time, and an install that lands reloads first anyway.
+    local function resume()
+      local q = queued()
+      store():set("queued", nil)
+      local list = {}
+      for _, p in ipairs(managed()) do
+        if q[p.name] and p.installed then list[#list + 1] = p end
+      end
+      if #list > 0 then update_list(list) end
+    end
     local missing, asked = {}, {}
     local wanted = pending()
     for _, p in ipairs(managed()) do
@@ -687,7 +756,7 @@ function M.after_load()
       end
     end
     store():set("pending", wanted)
-    if #missing == 0 then return end
+    if #missing == 0 then return resume() end
     local auto = ranma.get("hako.install_missing")
     local list = auto and missing or {}
     if not auto then
@@ -704,11 +773,15 @@ function M.after_load()
         local ok, res = install_one(p)
         if ok then set_pending(p.name, nil) end
         return ok, res
-      end)
+      end, { after = function(n)
+        if n > 0 then return reload() end
+        resume()
+      end })
       return
     end
     -- Declared and not installed, and nobody asked: say so, once for each
     -- new set of names, and let them pick.
+    resume()
     table.sort(missing)
     local key = table.concat(missing, ",")
     if store():get("told_missing") == key then return end

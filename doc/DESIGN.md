@@ -111,6 +111,17 @@ checkout now is, and runs the build the reload cut off. Found when hako
 updating itself left the lock at the old commit (2026-10-11). Installs have
 the same kind of note (`pending`, above).
 
+The same reload stops the rest of the run, too: with several plugins behind,
+the first to land reloads ranma, and the ones still waiting in the run (not
+fetched yet, or mid-fetch) were simply dropped, with no failure to show for
+it. Found as `U` "failing silently" for zen and ports while kizuna, git and
+kumiko landed (2026-10-12). So an update or sync run queues what it was asked
+for (`queued`), each plugin leaves the queue once its update ends (landed,
+same, or failed), and the next load runs an update over what is still queued,
+after any pending install. Every load lands at least one more, so it ends.
+The screen is noted to reopen when such a run starts, since the reload that
+closes it is ranma's, not hako's.
+
 ## The lockfile is the user's
 
 It defaults to the config directory, but the point of it is to sit in

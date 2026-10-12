@@ -136,7 +136,7 @@ The palette (leader `:`) has `hako` too:
 | --- | --- |
 | `hako` | The screen. |
 | `hako install [name]` | Clone what is declared and missing (or that one). By itself only with `hako.install_missing`. |
-| `hako update [name]` | Fetch, fast-forward, run `build`, lock where each landed, reload. |
+| `hako update [name]` | Fetch, fast-forward, run `build`, lock where each landed, reload. ranma reloads as soon as one lands; the next load goes on with the rest. |
 | `hako check [name]` | Fetch and count the new commits, changing nothing. Also every few hours on its own. |
 | `hako sync` | Install and update; asks first if it would clean. |
 | `hako restore [name]` | Back to the lockfile's commits. |

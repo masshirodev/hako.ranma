@@ -965,6 +965,11 @@ function M.before_reload()
   if screen then store():set("reopen", { sel = last_row, view = view }) end
 end
 
+-- A run that left that note ended without a reload after all.
+function M.forget_reopen()
+  store():set("reopen", nil)
+end
+
 -- After a load: open again if a reload of hako's closed the screen.
 function M.after_load()
   local again = store():get("reopen")

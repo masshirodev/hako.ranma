@@ -156,6 +156,38 @@ for _ in $(seq 1 40); do grep -q "$new" "$CFG/hako-lock.json" && break; sleep 0.
 grep -q "$new" "$CFG/hako-lock.json" || fail "an update a reload stopped was not locked where it landed"
 ok "an update a reload stopped is locked on the next load"
 
+# 3c. Updating several at once: the first to land changes a plugin's files,
+#     ranma reloads, and the run stops with the rest never fetched. The next
+#     load takes them up again, until all of them have landed.
+for r in alpha plain; do
+  printf '%s\n' "-- $r three" >> "$SRC/$r.ranma/plugin/$r.lua"
+  "${ENVV[@]}" git -C "$SRC/$r.ranma" commit -qam three
+done
+# One at a time, and alpha's fetch as slow as a real remote's (a local one
+# is done inside ranma's reload debounce), so the reload plain's landing sets
+# off always comes with alpha still to go.
+git -C "$ROOT/alpha.ranma" config remote.origin.uploadpack "sleep 1; git-upload-pack"
+echo 'ranma.set({ hako = { concurrency = 1 } })' >> "$CFG/init.lua"
+until_lua 'return ranma.get("hako.concurrency") == 1' "concurrency 1 loaded"
+RL 'require("hako").update()' >/dev/null
+for _ in $(seq 1 80); do
+  [ "$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)" = "$(git -C "$SRC/alpha.ranma" rev-parse HEAD)" ] \
+    && [ "$(git -C "$ROOT/plain.ranma" rev-parse HEAD)" = "$(git -C "$SRC/plain.ranma" rev-parse HEAD)" ] && break
+  sleep 0.25
+done
+for r in alpha plain; do
+  [ "$(git -C "$ROOT/$r.ranma" rev-parse HEAD)" = "$(git -C "$SRC/$r.ranma" rev-parse HEAD)" ] \
+    || fail "$r was left behind by an update a reload stopped"
+done
+until_lua 'return next(require("hako.state").store:get("queued") or {}) == nil and require("hako.ops").running() == nil' "the update queue empties"
+for r in alpha plain; do
+  grep -q "$(git -C "$SRC/$r.ranma" rev-parse HEAD)" "$CFG/hako-lock.json" || fail "$r not locked where it landed"
+done
+git -C "$ROOT/alpha.ranma" config --unset remote.origin.uploadpack
+sed -i '/concurrency = 1/d' "$CFG/init.lua"
+until_lua 'return ranma.get("hako.concurrency") == 4' "concurrency back to 4"
+ok "an update a reload stopped goes on with the rest on the next load"
+
 # 4. Clean.
 mkdir -p "$ROOT/stray.ranma"
 RL 'require("hako.ops").clean(true)' >/dev/null
