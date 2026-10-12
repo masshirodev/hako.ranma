@@ -614,6 +614,28 @@ function M.add(src, from)
   store():set("added", name)
   -- Adding is asking for it: the load the save sets off installs it.
   set_pending(name, true)
+  -- And it is cloned now too, not only by that load: a reload that fails
+  -- keeps the old configuration, which has never heard of this plugin. An
+  -- init.lua whose bar names the plugin's module before it is installed
+  -- fails exactly so, and then nothing would ever install it. A reload that
+  -- works stops this clone, and the pending install takes over.
+  local ctx = spec.new(ranma.config_dir)
+  spec.read(ctx, { src }, file, true)
+  local p = ctx.by_name[name]
+  if p and not p.dir then
+    p.errors, p.managed, p.wanted, p.on = {}, true, true, true
+    p.path = state.root .. "/" .. p.name
+    p.installed = util.is_dir(p.path)
+    if not p.installed then
+      util.later(function()
+        run("install", { p }, function(q)
+          local ok, res = install_one(q)
+          if ok then set_pending(q.name, nil) end
+          return ok, res
+        end, { quiet = true })
+      end)
+    end
+  end
   return name
 end
 

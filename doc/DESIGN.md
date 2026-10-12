@@ -88,6 +88,14 @@ that finds it there counts as done. The load's cleanup deletes only part dirs
 older than ten minutes, since a newer one may be another server's clone in
 progress, and a clone failure whose plugin is installed after all is cleared.
 
+**`add` clones at once** as well as leaving the install pending (2026-10-12).
+A reload that fails keeps the old configuration, and an `init.lua` whose bar
+names a plugin's module before the plugin is installed fails every reload:
+the old configuration never hears of the new spec, so nothing installed the
+plugin whose module would have made the config load. Cloning at once breaks
+that; a reload that does work stops the clone, and the pending install
+finishes it.
+
 ## State that outlives a reload
 
 Lua starts over on every reload, and every update ends in one. Update counts,

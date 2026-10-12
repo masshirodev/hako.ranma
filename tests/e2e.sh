@@ -293,4 +293,19 @@ T send-keys -t s Escape
 wait_screen "B browses" "esc back to the installed view, which points at Browse"
 ok "esc: back to the installed view"
 
+# 8. A bar that names a plugin's module before the plugin is installed: every
+#    reload fails and keeps the old configuration, which has never heard of
+#    the plugin. Adding it clones it at once, so the next reload has the
+#    module and loads.
+repo modded.ranma 'plugin/modded.lua=ranma.module("modded", { render = function() return "modded" end })'
+cp "$CFG/init.lua" "$WORK/init.before"
+sed -i 's/ranma.bar { right = { "hako", "clock" } }/ranma.bar { right = { "hako", "modded", "clock" } }/' "$CFG/init.lua"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+sleep 1
+[ "$(RL 'return require("hako.state").by_name["modded.ranma"] == nil')" = "true" ] || fail "the failing config was taken"
+RL 'require("hako.ops").add("file://'"$SRC"'/modded.ranma")' >/dev/null
+until_lua 'return require("hako.state").by_name["modded.ranma"] ~= nil and require("hako.state").by_name["modded.ranma"].loaded == true' "a plugin whose module the bar already names installs, and the config loads"
+ok "add clones at once: a bar naming the plugin's module no longer locks it out"
+cp "$WORK/init.before" "$CFG/init.lua"
+
 echo "hako e2e: ok"
