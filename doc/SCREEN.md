@@ -55,6 +55,7 @@ moment something fails.
 | `e` | the file at the error's line, in a pane | a failed load, a refused spec |
 | `enter` | its directory in a new pane | local, not managed, working, strays |
 | `o` | the selected plugin's options in settings | every plugin row |
+| `w` | its repository's page in the browser (`xdg-open`, `open` on macOS) | every plugin with a repository; also in Browse |
 
 **Nothing is deleted on one key.** `x`, `X`, and an `S` that would clean put an
 ask on the screen: the detail area says exactly what goes, the rows that would

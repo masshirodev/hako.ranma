@@ -79,6 +79,39 @@ function M.toast(text, urgent)
   M.later(function() ranma.toast(text, { urgent = urgent or false, timeout = urgent and 15 or nil }) end)
 end
 
+-- A plugin's repository as a page a browser opens: `owner/repo` (GitHub, as
+-- spec reads it), an https URL, or an ssh one (`git@host:owner/repo`,
+-- `ssh://git@host/owner/repo`), without `.git`. Nil for a path on disk or a
+-- `file://` URL, which have no page.
+function M.web_url(src)
+  if type(src) ~= "string" or src == "" then return nil end
+  src = src:gsub("/+$", ""):gsub("%.git$", "")
+  local host, path = src:match("^[%w._-]+@([%w.-]+):(.+)$")
+  if host then return "https://" .. host .. "/" .. path end
+  host, path = src:match("^ssh://[^@/]+@([%w.-]+)[:%d]*/(.+)$")
+  if host then return "https://" .. host .. "/" .. path end
+  if src:match("^https?://") then return src end
+  if src:match("^[%w._-]+/[%w._-]+$") then return "https://github.com/" .. src end
+  return nil
+end
+
+-- Open a URL in the desktop's browser, off the UI thread: `xdg-open`, or
+-- macOS's `open`. HAKO_OPEN names another opener (the tests use it).
+function M.open_url(url)
+  local opener = os.getenv("HAKO_OPEN")
+  if not opener or opener == "" then
+    opener = (M.exists("/usr/bin/open") and not M.exists("/usr/bin/xdg-open")) and "open" or "xdg-open"
+  end
+  ranma.spawn({ opener, url }, {
+    timeout = 10,
+    on_exit = function(r)
+      if r.error or (r.code and r.code ~= 0) then
+        M.toast("hako: could not open " .. url .. " (" .. (r.error or ("exit " .. r.code)) .. ")", true)
+      end
+    end,
+  })
+end
+
 -- A deep copy of `b` merged over `a`: tables merge, anything else replaces.
 function M.merge(a, b)
   if type(a) ~= "table" or type(b) ~= "table" then return b end

@@ -291,7 +291,13 @@ local function keys_for(p, st)
     b = { "b", "rebuild", on(id, function() ops.rebuild(p.name) end) },
     enter = { "enter", "open", on(id, function() if p.installed then open_dir(p.path) end end) },
   }
-  if state.tasks[p.name] then return { k.enter, k.l } end
+  -- Its repository's page, for every plugin that has one (a local one has none).
+  local web = util.web_url(p.url)
+  local function with_web(list)
+    if web then list[#list + 1] = { "w", "web", on(id, function() util.open_url(web) end) } end
+    return list
+  end
+  if state.tasks[p.name] then return with_web({ k.enter, k.l }) end
   local by = {
     loaded = { k.u, k.l, k.x },
     update = { k.u, k.l, k.x },
@@ -309,7 +315,7 @@ local function keys_for(p, st)
     pinned = { k.r, k.l, k.x },
     offlock = { k.r, k.u, k.l },
   }
-  return by[st] or by.loaded
+  return with_web(by[st] or by.loaded)
 end
 
 -- ---------------------------------------------------------------------------

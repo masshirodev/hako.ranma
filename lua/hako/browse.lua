@@ -191,6 +191,12 @@ local function plugin_row(ctx, e)
     row.keys = {}
     row.detail = plugin_detail(e, { "text", "Needs ranma " .. e.ranma .. "; this one is " .. (ranma.version or "?") .. ".", role = "accent", max = 1 })
   end
+  -- Its repository's page, on every row that names one.
+  local web = util.web_url(p and p.url or e.repo)
+  if web then
+    row.keys = row.keys or {}
+    row.keys[#row.keys + 1] = { "w", "web", ctx.on(e.name, function() util.open_url(web) end) }
+  end
   -- Installing: the clone runs on its row, as in the installed view.
   local t = p and state.tasks[p.name]
   if p and (t or state.results[p.name]) then

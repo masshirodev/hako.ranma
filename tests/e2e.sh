@@ -20,7 +20,7 @@ ENVV=(env -u SSH_CONNECTION -u SSH_TTY -u SSH_CLIENT -u RANMA -u RANMA_SOCKET -u
   "XDG_RUNTIME_DIR=$RT" "XDG_CACHE_HOME=$WORK/cache" "XDG_STATE_HOME=$STATE"
   "XDG_DATA_HOME=$WORK/data"
   "RANMA_CONFIG_DIR=$CFG" RANMA_NO_UPDATE_CHECK=1 SHELL=/bin/bash
-  "HAKO_OFFICIAL_LIST=file://$WORK/official.json"
+  "HAKO_OFFICIAL_LIST=file://$WORK/official.json" "HAKO_OPEN=$WORK/open.sh"
   GIT_CONFIG_GLOBAL=/dev/null GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t
   GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t)
 
@@ -263,6 +263,18 @@ T send-keys -t s Escape
 wait_screen "Not in spec" "esc comes back to the list"
 scr | grep -q "hako" || fail "esc closed the screen instead of going back"
 ok "l: the log, and esc back to the list"
+# w opens a plugin's repository in the browser: the opener here only writes
+# down what it was given. A repository on disk has no page, so no w.
+printf '#!/bin/sh\necho "$1" > "%s/opened"\n' "$WORK" > "$WORK/open.sh"
+chmod +x "$WORK/open.sh"
+[ "$(RL 'local u = require("hako.util"); return table.concat({ u.web_url("masshirodev/zen.ranma"), u.web_url("git@github.com:a/b.git"), u.web_url("ssh://git@codeberg.org/c/d.git"), u.web_url("https://gitlab.com/e/f.git") }, " ")')" = \
+  '"https://github.com/masshirodev/zen.ranma https://github.com/a/b https://codeberg.org/c/d https://gitlab.com/e/f"' ] ||
+  fail "web_url: $(RL 'return require("hako.util").web_url("git@github.com:a/b.git")')"
+[ "$(RL 'return require("hako.util").web_url("/tmp/x.ranma") == nil')" = "true" ] || fail "a path has a page"
+RL 'require("hako.util").open_url("https://github.com/masshirodev/hako.ranma")' >/dev/null
+for _ in $(seq 1 20); do [ -s "$WORK/opened" ] && break; sleep 0.25; done
+[ "$(cat "$WORK/opened" 2>/dev/null)" = "https://github.com/masshirodev/hako.ranma" ] || fail "open_url did not run the opener"
+ok "w: a repository's page, opened by the desktop's opener"
 
 # 7. Browse: plugins from lists. The official list is a local file here
 #    (HAKO_OFFICIAL_LIST), and so is the one added with a.

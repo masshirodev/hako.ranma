@@ -127,7 +127,7 @@ module) opens every plugin in sections by what needs you (Failed, Updates,
 Not installed, Installed, Not in spec, Not managed), with every operation on a
 key: `u/U` update, `i/I` install, `r/R` restore, `x/X` remove and clean, `C`
 check, `S` sync, `a` add, `l` the log, `e` the error's file, `o` the plugin's
-options. Nothing is deleted on one key: `x`, `X` and a cleaning `S` ask, and
+options, `w` its repository's page in the browser. Nothing is deleted on one key: `x`, `X` and a cleaning `S` ask, and
 only `y` answers. `doc/SCREEN.md` is the account.
 
 The palette (leader `:`) has `hako` too:
