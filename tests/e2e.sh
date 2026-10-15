@@ -90,6 +90,7 @@ ranma.bar { right = { "hako", "clock" } }
 EOF
 echo "return { \"file://$SRC/broken.ranma\" }" > "$CFG/lua/plugins/broken.lua"
 echo "return { \"file://$SRC/typo.ranma\", event = \"VeryLazy\" }" > "$CFG/lua/plugins/typo.lua"
+echo 'PLAIN_RAN = true' > "$CFG/lua/plugins/plain-config.lua"
 
 T new-session -d -s s -x 120 -y 30 "${ENVV[*]} ranma; sleep 60"
 for _ in $(seq 1 40); do RL 'true' >/dev/null 2>&1 && break; sleep 0.25; done
@@ -121,8 +122,13 @@ ok "enabled = false installs nothing"
 [ "$(RL 'return require("hako.state").by_name["broken.ranma"].loaded')" = "false" ] || fail "broken counted as loaded"
 RL 'return require("hako.state").by_name["broken.ranma"].errors[1]' | grep -q boom || fail "broken's error not kept"
 ok "a failing plugin is reported, and ranma runs on"
-RL 'return require("hako.state").spec_errors[1].error' | grep -q 'does not lazy-load' || fail "lazy.nvim's event field not refused"
+spec_errors() { RL 'local o = {} for _, e in ipairs(require("hako.state").spec_errors) do o[#o+1] = e.spec .. ": " .. e.error end return table.concat(o, "\n")'; }
+spec_errors | grep -q 'does not lazy-load' || fail "lazy.nvim's event field not refused: $(spec_errors)"
 ok "a lazy-loading field is refused by name, the rest load"
+spec_errors | grep -q 'plain-config.lua: it returns no spec.*goes in plugin/' || fail "plain Lua among the specs not pointed at plugin/"
+ok "a spec file that returns nothing is told where plain Lua goes"
+# Gone before the screen is looked at, whose rows the later steps count.
+rm "$CFG/lua/plugins/plain-config.lua"
 
 # 2. Check and update.
 old=$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)

@@ -32,6 +32,13 @@ one file in `~/.config/ranma/lua/plugins/`:
 return { "masshirodev/history.ranma" }
 ```
 
+Every file there must `return` a spec. `lua/plugins/` is not ranma's
+`plugin/`, one letter away: Lua that only configures ranma (binds, hooks,
+`ranma.layout`) goes in `~/.config/ranma/plugin/`, which ranma runs itself. A
+file in the spec folder that returns nothing is an error saying so. The name
+is lazy.nvim's; `{ import = "specs" }` reads `lua/specs/` instead, for a
+folder that cannot be mistaken for `plugin/`.
+
 To choose the specs or the lockfile yourself, call `setup` in `init.lua`,
 which replaces the default list:
 

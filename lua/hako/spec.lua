@@ -179,7 +179,11 @@ function M.read(ctx, t, source, single)
       if not ok then
         ctx.errors[#ctx.errors + 1] = { source = file, spec = file:match("[^/]*$"), error = tostring(res) }
       elseif type(res) ~= "table" and type(res) ~= "string" then
-        ctx.errors[#ctx.errors + 1] = { source = file, spec = file:match("[^/]*$"), error = "it returns no spec" }
+        -- The likely mistake is plain configuration put here because the
+        -- folder is called plugins: say what belongs here and where that goes.
+        ctx.errors[#ctx.errors + 1] = { source = file, spec = file:match("[^/]*$"),
+          error = "it returns no spec: a file here ends in return { \"owner/repo\" }; "
+            .. "Lua that only configures ranma (binds, hooks, ranma.layout) goes in plugin/, which ranma runs itself" }
       else
         M.read(ctx, res, file, type(res) == "string" or is_spec(res))
       end
