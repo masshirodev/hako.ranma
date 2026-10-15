@@ -61,8 +61,11 @@ moment something fails.
 ask on the screen: the detail area says exactly what goes, the rows that would
 go are marked `deletes`, and only `y` answers (`esc` keeps everything). A
 plugin declared in a file of its own (`lua/plugins/x.lua`) is removed with
-that file; one declared in `init.lua` gets an explanation instead, since hako
-never rewrites `init.lua`, and `e` opens it at the line.
+that file. One declared with `install = true` anywhere else (ranma's default
+setup brings mobile.ranma so) loses only its clone, and is not installed
+again by itself; `i` puts it back. Any other declared in `init.lua` gets an
+explanation instead, since hako never rewrites `init.lua`, and `e` opens it
+at the line.
 
 ## Browse
 

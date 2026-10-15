@@ -183,6 +183,22 @@ local function landed(p)
   return util.is_dir(p.path) and util.git_head(p.path) ~= nil
 end
 
+-- `install = true` means once: after a plugin has landed, hako never installs
+-- it by itself again, so deleting it (x on the screen) is a choice that
+-- sticks. Kept in the store, which is per machine and on disk: dotfiles
+-- shared between machines do not carry one machine's choice to another.
+local function once()
+  return store():get("installed_once") or {}
+end
+
+local function mark_once(p)
+  if not (p.install and landed(p)) then return end
+  local all = once()
+  if all[p.name] then return end
+  all[p.name] = true
+  store():set("installed_once", all)
+end
+
 local function install_one(p)
   -- Another server installed it while this one was asked to.
   if landed(p) then return true, { lock = locate(p), changed = true, result = { "✓ cloned", "normal" } } end
@@ -652,6 +668,22 @@ function M.remove(name)
   return true
 end
 
+-- A plugin declared with `install = true` in a spec hako may not delete (ranma's
+-- default setup, init.lua): delete only the clone. The once mark keeps it from
+-- being installed again; `i` puts it back. (The screen asks first.)
+function M.remove_clone(name)
+  local p = state.by_name[name or ""]
+  if not (p and p.install and p.managed and p.installed) then return false end
+  mark_once(p)
+  M.delete({ { name = p.name, path = p.path } }, function() reload() end)
+  return true
+end
+
+-- Whether `x` can take this plugin away without touching a spec.
+function M.removable_clone(p)
+  return p.install == true and p.managed and p.installed
+end
+
 -- Write lua/<import>/<name>.lua with the spec; saving it reloads ranma, which
 -- installs it. Returns the plugin's name, or nil and why not.
 function M.add(src, from)
@@ -753,12 +785,17 @@ function M.after_load()
     -- on disk and outlives the server, hence a time rather than a flag.
     local tried = store():get("auto_tried") or {}
     local now = os.time()
+    local had = once()
     for _, p in ipairs(managed()) do
+      if p.installed then mark_once(p) end
       if not p.installed then
-        missing[#missing + 1] = p.name
+        -- Installed once and deleted since: the user's choice, so neither
+        -- installed again nor counted among what is missing.
+        local removed = p.install and had[p.name]
+        if not removed then missing[#missing + 1] = p.name end
         if wanted[p.name] then
           asked[#asked + 1] = p
-        elseif p.install and now - (tried[p.name] or 0) >= 3600 then
+        elseif p.install and not removed and now - (tried[p.name] or 0) >= 3600 then
           tried[p.name] = now
           asked[#asked + 1] = p
         end
@@ -783,7 +820,10 @@ function M.after_load()
         return ps
       end)(), function(p)
         local ok, res = install_one(p)
-        if ok then set_pending(p.name, nil) end
+        if ok then
+          set_pending(p.name, nil)
+          mark_once(p)
+        end
         return ok, res
       end, { after = function(n)
         if n > 0 then return reload() end

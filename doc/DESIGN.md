@@ -73,7 +73,21 @@ enabled = false }` in a spec file merges over the default and `clean`
 deletes it, where a clone hako did not know about would sit under *Not in
 spec* and come back on the next start. A try is noted with its time in the
 store and not repeated within the hour: the store is on disk, so a flag
-would mean once ever, and an offline first start would never retry. The lock is written as each plugin lands rather than when the run ends,
+would mean once ever, and an offline first start would never retry.
+
+**And it means once** (2026-10-15). Turning the plugin off with a spec file
+was the only way out, and editing a config to say "no" to something you
+never asked for is a poor answer. So when a plugin with `install = true` has
+landed (a whole clone with a HEAD, the same test a finished install passes;
+a half-made clone is in a part directory and never counts), the store marks
+it `installed_once`, on the install or on any load that finds it there.
+From then on hako never installs it by itself: `x` on the screen deletes the
+clone and leaves the spec alone, since the spec is ranma's default setup or
+a file with several in it, which hako does not rewrite. It is then neither
+installed again nor counted in the "declared, not installed" toast, and `i`
+brings it back. The mark is per machine, in the store rather than the
+lockfile, so dotfiles shared between two machines do not carry one's choice
+to the other. The lock is written as each plugin lands rather than when the run ends,
 for the same reason.
 
 ## A clone is renamed into place when it is whole

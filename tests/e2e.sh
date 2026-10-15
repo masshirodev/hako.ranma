@@ -358,24 +358,44 @@ until_lua 'return require("hako.state").by_name["modded.ranma"] ~= nil and requi
 ok "add clones at once: a bar naming the plugin's module no longer locks it out"
 cp "$WORK/init.before" "$CFG/init.lua"
 
-# 9. install = true: installed without asking, as ranma's default setup
+# 9. install = true: installed without asking, once, as ranma's default setup
 #    declares mobile.ranma. A spec file that disables it wins the merge, and
-#    nothing is cloned.
+#    nothing is cloned. Once it has landed, removing it sticks; a plugin that
+#    never landed is tried again, but at most once an hour.
 repo auto.ranma 'plugin/auto.lua=ranma.option("auto.n", { type = "int", default = 4 })'
 repo autooff.ranma 'plugin/autooff.lua=error("disabled: never loaded")'
-echo "return { { \"file://$SRC/auto.ranma\", install = true }, { \"file://$SRC/autooff.ranma\", install = true } }" > "$CFG/lua/plugins/auto.lua"
+echo "return { { \"file://$SRC/auto.ranma\", install = true }, { \"file://$SRC/autooff.ranma\", install = true }, { \"file://$SRC/later.ranma\", install = true } }" > "$CFG/lua/plugins/auto.lua"
 echo "return { \"file://$SRC/autooff.ranma\", enabled = false }" > "$CFG/lua/plugins/zz-autooff.lua"
 "${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
 until_lua 'return ranma.get("auto.n") == 4' "install = true installs without asking"
 ok "install = true: installed and loaded without asking"
 [ ! -e "$ROOT/autooff.ranma" ] || fail "enabled = false in a later spec file did not win over install = true"
 ok "enabled = false merged over install = true installs nothing"
-# Deleted by hand: within the hour it is not cloned again.
-rm -rf "$ROOT/auto.ranma"
+until_lua 'return (ranma.store("hako"):get("installed_once") or {})["auto.ranma"] == true' "the once mark after it landed"
+[ "$(RL 'return (ranma.store("hako"):get("installed_once") or {})["later.ranma"] == nil')" = "true" ] || fail "a clone that failed was marked installed"
+ok "landed: marked installed once; a failed clone is not"
+# x on the screen, for a plugin no spec file of its own declares: the clone
+# goes, the specs stay, and it is not installed again or counted as missing.
+[ "$(RL 'return require("hako.ops").remove_clone("auto.ranma")')" = "true" ] || fail "remove_clone refused"
+for _ in $(seq 1 40); do [ ! -e "$ROOT/auto.ranma" ] && break; sleep 0.25; done
+sleep 2
 "${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
 sleep 3
-[ ! -e "$ROOT/auto.ranma" ] || fail "a plugin tried within the hour was cloned again"
-ok "install = true tries at most once an hour"
+[ ! -e "$ROOT/auto.ranma" ] || fail "a plugin installed once and removed came back"
+grep -q "auto.ranma" "$CFG/lua/plugins/auto.lua" || fail "removing the clone touched the spec"
+[ "$(RL 'return ranma.store("hako"):get("told_missing") or ""')" != "" ] && \
+  RL 'return ranma.store("hako"):get("told_missing")' | grep -q auto && fail "a removed plugin was counted as missing"
+ok "x: the clone goes, the spec stays, and it is not installed again"
+RL 'require("hako").install("auto.ranma")' >/dev/null
+until_lua 'return ranma.get("auto.n") == 4' "i puts a removed plugin back"
+ok "i puts it back"
+# later.ranma's clone failed (no repository yet). Made now, it is not
+# cloned again within the hour.
+repo later.ranma 'plugin/later.lua=ranma.option("later.n", { type = "int", default = 1 })'
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+sleep 3
+[ ! -e "$ROOT/later.ranma" ] || fail "a plugin tried within the hour was cloned again"
+ok "a clone that failed is tried again at most once an hour"
 rm "$CFG/lua/plugins/auto.lua" "$CFG/lua/plugins/zz-autooff.lua"
 
 echo "hako e2e: ok"

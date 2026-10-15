@@ -602,6 +602,22 @@ function ask_remove(p)
       },
     }, "remove?")
   end
+  if ops.removable_clone(p) then
+    marked[p.name] = true
+    refresh()
+    return asking({
+      blocks = {
+        { "text", "Remove " .. p.name .. "?", role = "urgent", strong = true },
+        { "log", lines = { { { "deletes ", "num" }, { "its clone, " .. util.tilde(p.path) } } } },
+        { "text", "It stays declared, but is not installed again by itself: i puts it back.",
+          role = "dim", max = 3 },
+      },
+      keys = {
+        { "y", "remove", function() done_asking(); M.before_reload(); ops.remove_clone(p.name) end, role = "urgent" },
+        { "esc", "keep it", done_asking },
+      },
+    }, "remove?")
+  end
   local text = p.name .. " is declared in " .. (where or "your config") .. "."
   asking({
     blocks = {

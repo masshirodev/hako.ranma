@@ -122,7 +122,7 @@ deeply, as lazy.nvim does.
 | `cond` | `false`: installed and updated, not loaded. |
 | `branch`, `tag`, `commit` | What to follow. A `tag` or a `commit` pins it. |
 | `pin` | `true`: never updated (checks still count what it misses). |
-| `install` | `true`: installed without asking when it is missing, as if `hako.install_missing` were on for this one (at most one try an hour, so an offline box is not told on every reload). ranma's default setup declares [mobile.ranma](https://github.com/masshirodev/mobile.ranma) this way. |
+| `install` | `true`: installed once without asking, as if `hako.install_missing` were on for this one until it lands (at most one try an hour, so an offline box is not told on every reload). Once it has landed, `x` on the screen deletes it without touching the spec, and it is not installed again by itself; `i` puts it back. The mark is in hako's store, per machine. ranma's default setup declares [mobile.ranma](https://github.com/masshirodev/mobile.ranma) this way. |
 | `build` | A shell command run in its directory, or `function(plugin)`, after install and update. |
 
 Anything else is an error naming the field, the spec and the file it is in;
