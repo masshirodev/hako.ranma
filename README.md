@@ -80,7 +80,8 @@ one and `I` all of them (or `hako install`, or `S`). Adding one with `a` or
 `hako add` is asking, so that one installs. An install a reload stops partway
 is picked up again by the next load. To have every declared plugin installed
 by itself, as lazy.nvim does, set
-`ranma.set { hako = { install_missing = true } }`.
+`ranma.set { hako = { install_missing = true } }`; for one plugin, give its
+spec `install = true`.
 
 ## Specs
 
@@ -121,6 +122,7 @@ deeply, as lazy.nvim does.
 | `cond` | `false`: installed and updated, not loaded. |
 | `branch`, `tag`, `commit` | What to follow. A `tag` or a `commit` pins it. |
 | `pin` | `true`: never updated (checks still count what it misses). |
+| `install` | `true`: installed without asking when it is missing, as if `hako.install_missing` were on for this one (at most one try an hour, so an offline box is not told on every reload). ranma's default setup declares [mobile.ranma](https://github.com/masshirodev/mobile.ranma) this way. |
 | `build` | A shell command run in its directory, or `function(plugin)`, after install and update. |
 
 Anything else is an error naming the field, the spec and the file it is in;

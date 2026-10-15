@@ -358,4 +358,24 @@ until_lua 'return require("hako.state").by_name["modded.ranma"] ~= nil and requi
 ok "add clones at once: a bar naming the plugin's module no longer locks it out"
 cp "$WORK/init.before" "$CFG/init.lua"
 
+# 9. install = true: installed without asking, as ranma's default setup
+#    declares mobile.ranma. A spec file that disables it wins the merge, and
+#    nothing is cloned.
+repo auto.ranma 'plugin/auto.lua=ranma.option("auto.n", { type = "int", default = 4 })'
+repo autooff.ranma 'plugin/autooff.lua=error("disabled: never loaded")'
+echo "return { { \"file://$SRC/auto.ranma\", install = true }, { \"file://$SRC/autooff.ranma\", install = true } }" > "$CFG/lua/plugins/auto.lua"
+echo "return { \"file://$SRC/autooff.ranma\", enabled = false }" > "$CFG/lua/plugins/zz-autooff.lua"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+until_lua 'return ranma.get("auto.n") == 4' "install = true installs without asking"
+ok "install = true: installed and loaded without asking"
+[ ! -e "$ROOT/autooff.ranma" ] || fail "enabled = false in a later spec file did not win over install = true"
+ok "enabled = false merged over install = true installs nothing"
+# Deleted by hand: within the hour it is not cloned again.
+rm -rf "$ROOT/auto.ranma"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+sleep 3
+[ ! -e "$ROOT/auto.ranma" ] || fail "a plugin tried within the hour was cloned again"
+ok "install = true tries at most once an hour"
+rm "$CFG/lua/plugins/auto.lua" "$CFG/lua/plugins/zz-autooff.lua"
+
 echo "hako e2e: ok"

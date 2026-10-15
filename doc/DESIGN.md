@@ -62,7 +62,18 @@ machine wants every plugin installed the moment it starts. `a` and
 What was asked for is kept in the store (`pending`) until it lands, because a
 reload stops every job: the next load installs what is still pending.
 `hako.install_missing = true` installs everything declared, as lazy.nvim
-does. The lock is written as each plugin lands rather than when the run ends,
+does.
+
+`install = true` on a spec is the same choice made for one plugin
+(2026-10-15), for what ranma's default setup brings along: mobile.ranma, the
+phone's view, which is useless if it waits for a key nobody presses on the
+desk. It is a spec field rather than ranma cloning it as it clones hako, so
+the plugin is an ordinary declared one: `{ "masshirodev/mobile.ranma",
+enabled = false }` in a spec file merges over the default and `clean`
+deletes it, where a clone hako did not know about would sit under *Not in
+spec* and come back on the next start. A try is noted with its time in the
+store and not repeated within the hour: the store is on disk, so a flag
+would mean once ever, and an offline first start would never retry. The lock is written as each plugin lands rather than when the run ends,
 for the same reason.
 
 ## A clone is renamed into place when it is whole

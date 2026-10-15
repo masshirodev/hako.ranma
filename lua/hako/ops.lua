@@ -747,15 +747,27 @@ function M.after_load()
     end
     local missing, asked = {}, {}
     local wanted = pending()
+    -- `install = true` is asked for by the spec itself: the defaults ranma
+    -- brings declare what should be there on a first start. At most one try
+    -- an hour, so an offline box is not told on every reload. The store is
+    -- on disk and outlives the server, hence a time rather than a flag.
+    local tried = store():get("auto_tried") or {}
+    local now = os.time()
     for _, p in ipairs(managed()) do
       if not p.installed then
         missing[#missing + 1] = p.name
-        if wanted[p.name] then asked[#asked + 1] = p end
+        if wanted[p.name] then
+          asked[#asked + 1] = p
+        elseif p.install and now - (tried[p.name] or 0) >= 3600 then
+          tried[p.name] = now
+          asked[#asked + 1] = p
+        end
       else
         wanted[p.name] = nil
       end
     end
     store():set("pending", wanted)
+    store():set("auto_tried", tried)
     if #missing == 0 then return resume() end
     local auto = ranma.get("hako.install_missing")
     local list = auto and missing or {}

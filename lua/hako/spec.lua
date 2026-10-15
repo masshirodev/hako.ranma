@@ -12,7 +12,7 @@ local M = {}
 local FIELDS = {
   name = "string", url = "string", dir = "string", main = "string",
   branch = "string", tag = "string", commit = "string",
-  pin = "boolean", priority = "number",
+  pin = "boolean", install = "boolean", priority = "number",
   enabled = "boolean|function", cond = "boolean|function",
   opts = "table|function", config = "function", init = "function",
   build = "string|function", keys = "table", dependencies = "table|string",
