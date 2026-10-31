@@ -154,6 +154,20 @@ dotfiles, so `lockfile` takes any path. Written sorted, one plugin a line, so
 a diff of it reads as what changed. Only declared, managed plugins are kept in
 it.
 
+## A rewritten upstream is followed, not refused
+
+An update fast-forwards. On 2026-10-31 agents.ranma's history was rewritten
+and force-pushed (a name taken out of every commit: the same files on new
+commits), and its update failed for good with git's "refusing to merge
+unrelated histories". A clone hako made is hako's, moved only by hako, so
+when the fast-forward fails because HEAD is no ancestor of upstream any more
+and nothing in the files was changed, the update resets it to upstream and
+says `✓ rewritten`; the reflog keeps where it was. A clone with edits in its
+files is someone's work and is left, the update failing as before. Commits
+made in a clone are not looked for: hako's clones are not where plugins are
+developed (a `dir` spec is, and hako never moves one). ranma's own update
+does the same with its clone, for the same rewrite of ranma's `main`.
+
 ## Removing is narrow on purpose
 
 hako writes spec files (`hako add` → `lua/plugins/<name>.lua`) and deletes

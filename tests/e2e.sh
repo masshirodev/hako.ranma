@@ -194,6 +194,43 @@ sed -i '/concurrency = 1/d' "$CFG/init.lua"
 until_lua 'return ranma.get("hako.concurrency") == 4' "concurrency back to 4"
 ok "an update a reload stopped goes on with the rest on the next load"
 
+# 3d. Upstream's history rewritten and force-pushed (agents.ranma, 2026-10-31:
+#     a name taken out of every commit): the same files on commits the clone
+#     never had, which no fast-forward reaches. The clone goes to upstream;
+#     with an edit in its files it is left, and the update fails.
+rewrite() {
+  "${ENVV[@]}" git -C "$SRC/alpha.ranma" checkout -q --orphan rewritten
+  "${ENVV[@]}" git -C "$SRC/alpha.ranma" commit -qm "$1"
+  "${ENVV[@]}" git -C "$SRC/alpha.ranma" branch -q -M rewritten main
+}
+rewrite "alpha, rewritten"
+RL 'require("hako").update("alpha.ranma")' >/dev/null
+for _ in $(seq 1 40); do
+  [ "$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)" = "$(git -C "$SRC/alpha.ranma" rev-parse HEAD)" ] && break
+  sleep 0.25
+done
+[ "$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)" = "$(git -C "$SRC/alpha.ranma" rev-parse HEAD)" ] \
+  || fail "an update did not follow a rewritten upstream"
+until_lua 'return require("hako.ops").running() == nil' "the rewrite's update finished"
+grep -q "$(git -C "$SRC/alpha.ranma" rev-parse HEAD)" "$CFG/hako-lock.json" || fail "a rewritten plugin was not locked"
+ok "update: follows a rewritten upstream"
+kept=$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)
+rewrite "alpha, rewritten again"
+echo "-- an edit of the user's" >> "$ROOT/alpha.ranma/plugin/alpha.lua"
+RL 'require("hako").update("alpha.ranma")' >/dev/null
+sleep 1
+until_lua 'return require("hako.ops").running() == nil' "the edited clone's update finished"
+[ "$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)" = "$kept" ] || fail "an update reset a clone with edits in it"
+grep -q "an edit of the user's" "$ROOT/alpha.ranma/plugin/alpha.lua" || fail "an update threw away an edit"
+git -C "$ROOT/alpha.ranma" checkout -q -- plugin/alpha.lua
+RL 'require("hako").update("alpha.ranma")' >/dev/null
+for _ in $(seq 1 40); do
+  [ "$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)" = "$(git -C "$SRC/alpha.ranma" rev-parse HEAD)" ] && break
+  sleep 0.25
+done
+until_lua 'return require("hako.ops").running() == nil' "the clean clone's update finished"
+ok "update: a rewritten upstream leaves a clone with edits alone"
+
 # 4. Clean.
 mkdir -p "$ROOT/stray.ranma"
 RL 'require("hako.ops").clean(true)' >/dev/null

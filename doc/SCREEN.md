@@ -31,7 +31,7 @@ them. Rows are sorted by name inside one.
 
 **Rows hold still while a run goes.** Each row keeps the section it had when
 the run began; its value turns into a meter (`clone ━━━●───`), a task and a
-time (`build 0:04`), then the outcome (`✓ +3`, `✓ same`, `– skipped`, `✗ pull`).
+time (`build 0:04`), then the outcome (`✓ +3`, `✓ same`, `✓ rewritten`, `– skipped`, `✗ pull`).
 They move to their new sections when the run ends.
 
 The status (top right) is the worst thing on the screen: `2 failed`, else

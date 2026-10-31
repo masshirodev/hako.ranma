@@ -297,6 +297,15 @@ local function landing(name, v)
   store():set("landing", all)
 end
 
+-- Whether a failed fast-forward was upstream's history moving under the
+-- checkout: HEAD is no ancestor of the target, and nothing in the files was
+-- changed. Inside a task.
+local function moved_under(p, ref)
+  if git(p, "merge-base", "--is-ancestor", "HEAD", ref) then return false end
+  local ok, out = git(p, "status", "--porcelain")
+  return ok and out == ""
+end
+
 local function update_one(p)
   if p.commit then return true, { result = { "– skipped", "dim" } } end
   local ok, info = check_one(p)
@@ -314,6 +323,17 @@ local function update_one(p)
   t.tail = { "$ " .. table.concat(argv, " ", 3) }
   landing(p.name, { from = from, build = p.build ~= nil })
   ok, err, code = watched(t, argv)
+  local rewritten = false
+  if not ok and not p.tag and moved_under(p, info.ref) then
+    -- Upstream's history was rewritten (a name taken out of every commit,
+    -- and force-pushed): no fast-forward reaches it. The clone is hako's,
+    -- only ever moved by hako, so it goes to upstream; the reflog keeps
+    -- where it was. One with edits in its files is someone's work: left.
+    argv = { "git", "-C", p.path, "reset", "--hard", "--quiet", info.ref }
+    t.tail[#t.tail + 1] = "$ " .. table.concat(argv, " ", 3)
+    ok, err, code = watched(t, argv)
+    rewritten = ok
+  end
   if not ok then
     landing(p.name, nil)
     return false, failure(t, "pull", argv, code, err)
@@ -324,7 +344,8 @@ local function update_one(p)
   set_update(p.name, nil)
   local _, to = git(p, "rev-parse", "HEAD")
   add_history({ name = p.name, from = from, to = to, time = os.time(), commits = commits_between(p, from, to) })
-  return true, { lock = locate(p), changed = true, result = { "✓ +" .. info.n, "normal" } }
+  local result = rewritten and { "✓ rewritten", "normal" } or { "✓ +" .. info.n, "normal" }
+  return true, { lock = locate(p), changed = true, result = result }
 end
 
 local function restore_one(p)
