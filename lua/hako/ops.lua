@@ -382,8 +382,25 @@ end
 
 local function managed(name)
   local out = {}
+  local set
+  if type(name) == "table" then
+    set = {}
+    for k, v in pairs(name) do
+      if type(k) == "number" and type(v) == "string" then set[v] = true
+      elseif type(k) == "string" and v then set[k] = true end
+    end
+  elseif type(name) == "string" and name:find("%s") then
+    set = {}
+    for n in name:gmatch("%S+") do set[n] = true end
+  end
   for _, p in ipairs(state.plugins) do
-    if p.managed and p.wanted and (name == nil or p.name == name) then out[#out + 1] = p end
+    if p.managed and p.wanted then
+      if set then
+        if set[p.name] then out[#out + 1] = p end
+      elseif name == nil or p.name == name then
+        out[#out + 1] = p
+      end
+    end
   end
   return out
 end
@@ -470,6 +487,10 @@ local function set_pending(name, on)
   local all = pending()
   all[name] = on or nil
   store():set("pending", all)
+end
+
+function M.set_pending(name, on)
+  set_pending(name, on)
 end
 
 function M.install(name, opts)
@@ -705,9 +726,16 @@ function M.removable_clone(p)
   return p.install == true and p.managed and p.installed
 end
 
--- Write lua/<import>/<name>.lua with the spec; saving it reloads ranma, which
--- installs it. Returns the plugin's name, or nil and why not.
-function M.add(src, from)
+local function set_added(name)
+  local all = store():get("added")
+  if type(all) ~= "table" then
+    all = all and { [all] = true } or {}
+  end
+  all[name] = true
+  store():set("added", all)
+end
+
+local function add_one(src, from)
   src = (src or ""):gsub("^%s+", ""):gsub("%s+$", "")
   if src == "" then return nil, "give owner/repo or a URL" end
   local dir = state.imports[1]
@@ -721,14 +749,14 @@ function M.add(src, from)
   local ok, err = util.write(file, "-- " .. util.tilde(file) .. "\n" .. by .. "\nreturn {\n  "
     .. string.format("%q", src) .. ",\n}\n")
   if not ok then return nil, tostring(err) end
-  store():set("added", name)
+  set_added(name)
   -- Adding is asking for it: the load the save sets off installs it.
   set_pending(name, true)
-  -- And it is cloned now too, not only by that load: a reload that fails
-  -- keeps the old configuration, which has never heard of this plugin. An
-  -- init.lua whose bar names the plugin's module before it is installed
-  -- fails exactly so, and then nothing would ever install it. A reload that
-  -- works stops this clone, and the pending install takes over.
+  -- And it is cloned now too (by M.add), not only by that load: a reload
+  -- that fails keeps the old configuration, which has never heard of this
+  -- plugin. An init.lua whose bar names the plugin's module before it is
+  -- installed fails exactly so, and then nothing would ever install it. A
+  -- reload that works stops this clone, and the pending install takes over.
   local ctx = spec.new(ranma.config_dir)
   spec.read(ctx, { src }, file, true)
   local p = ctx.by_name[name]
@@ -736,17 +764,58 @@ function M.add(src, from)
     p.errors, p.managed, p.wanted, p.on = {}, true, true, true
     p.path = state.root .. "/" .. p.name
     p.installed = util.is_dir(p.path)
-    if not p.installed then
-      util.later(function()
-        run("install", { p }, function(q)
-          local ok, res = install_one(q)
-          if ok then set_pending(q.name, nil) end
-          return ok, res
-        end, { quiet = true })
-      end)
+  end
+  return name, nil, p
+end
+
+-- Write lua/<import>/<name>.lua with the spec; saving it reloads ranma, which
+-- installs it. Takes owner/repo or a URL, several separated by spaces, or a
+-- list (of those, or of { src, from }). Returns the names written, as a list
+-- (nil when none was), and why the others were not (nil when all were): one
+-- bad name among several must still be said.
+function M.add(src, from)
+  local list = {}
+  if type(src) == "table" then
+    for _, it in ipairs(src) do
+      if type(it) == "table" then
+        list[#list + 1] = { src = it.src or it.repo or it[1], from = it.from or from }
+      else
+        list[#list + 1] = { src = tostring(it), from = from }
+      end
+    end
+  elseif type(src) == "string" and src:find("%s") and not src:find("^https?://") and not src:find("^file://") and not src:find("^git@") then
+    for w in src:gmatch("%S+") do list[#list + 1] = { src = w, from = from } end
+  else
+    list[1] = { src = src, from = from }
+  end
+
+  if #list == 0 then return nil, "give owner/repo or a URL" end
+
+  local names, errs, to_clone = {}, {}, {}
+  for _, it in ipairs(list) do
+    local name, err, p = add_one(it.src, it.from)
+    if name then
+      names[#names + 1] = name
+      if p and not p.installed then to_clone[#to_clone + 1] = p end
+    else
+      errs[#errs + 1] = err
     end
   end
-  return name
+
+
+  if #to_clone > 0 then
+    util.later(function()
+      run("install", to_clone, function(q)
+        local ok, res = install_one(q)
+        if ok then set_pending(q.name, nil) end
+        return ok, res
+      end, { quiet = true })
+    end)
+  end
+
+  local why = #errs > 0 and table.concat(errs, "; ") or nil
+  if #names == 0 then return nil, why end
+  return names, why
 end
 
 -- Once ranma has loaded: install what is missing, and check when it is time.

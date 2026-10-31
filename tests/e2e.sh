@@ -43,7 +43,7 @@ RL() { "${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma lua "$1" 2>&1; }
 # Wait until a Lua expression returns true.
 until_lua() { # expr, what
   for _ in $(seq 1 80); do [ "$(RL "$1")" = "true" ] && return 0; sleep 0.25; done
-  fail "$2"
+  fail "$2: got $(RL "$1")"
 }
 
 # A plugin repository: name, then file=content pairs.
@@ -129,8 +129,11 @@ spec_errors | grep -q 'plain-config.lua: it returns no spec.*goes in plugin/' ||
 ok "a spec file that returns nothing is told where plain Lua goes"
 # Gone before the screen is looked at, whose rows the later steps count.
 rm "$CFG/lua/plugins/plain-config.lua"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+sleep 1
 
 # 2. Check and update.
+until_lua 'return require("hako.ops").running() == nil' "install run finished"
 old=$(git -C "$ROOT/alpha.ranma" rev-parse HEAD)
 printf '%s\n' 'ranma.option("alpha.n", { type = "int", default = 1 })' 'ranma.option("alpha.v", { type = "string", default = "two" })' > "$SRC/alpha.ranma/plugin/alpha.lua"
 "${ENVV[@]}" git -C "$SRC/alpha.ranma" commit -qam two
@@ -260,6 +263,35 @@ RL 'require("hako.ops").add("file://'"$SRC"'/gamma.ranma")' >/dev/null
 until_lua 'return ranma.get("gamma.n") == 3' "an added plugin installs and loads"
 ok "add: lua/plugins/gamma.lua written, installed, loaded"
 
+# 5b. Install multiple plugins at once by name.
+repo kappa.ranma 'plugin/kappa.lua=ranma.option("kappa.n", { type = "int", default = 11 })'
+repo lambda.ranma 'plugin/lambda.lua=ranma.option("lambda.n", { type = "int", default = 12 })'
+echo 'return { "file://'"$SRC"'/kappa.ranma" }' > "$CFG/lua/plugins/kappa.lua"
+echo 'return { "file://'"$SRC"'/lambda.ranma" }' > "$CFG/lua/plugins/lambda.lua"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+until_lua 'return require("hako.state").by_name["kappa.ranma"] ~= nil and require("hako.state").by_name["lambda.ranma"] ~= nil' "new plugins declared"
+RL 'require("hako").install("kappa.ranma lambda.ranma")' >/dev/null
+until_lua 'return ranma.get("kappa.n") == 11 and ranma.get("lambda.n") == 12' "install multiple names installs and loads both"
+ok "install: multiple plugins by name install and reload together"
+rm -f "$CFG/lua/plugins/kappa.lua" "$CFG/lua/plugins/lambda.lua"
+rm -rf "$ROOT/kappa.ranma" "$ROOT/lambda.ranma"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+until_lua 'return require("hako.state").by_name["kappa.ranma"] == nil and require("hako.state").by_name["lambda.ranma"] == nil' "cleaned up test plugins"
+
+# 5c. Adding several where one cannot be: the others are added, and the one
+#     that was not still says why (its spec file is there already).
+repo mu.ranma 'plugin/mu.lua=ranma.option("mu.n", { type = "int", default = 13 })'
+echo '-- the user'"'"'s own' > "$CFG/lua/plugins/nu.lua"
+out=$(RL 'local n, e = require("hako.ops").add({ "file://'"$SRC"'/mu.ranma", "file://'"$SRC"'/nu.ranma" }) return table.concat(n or {}, ",") .. " | " .. tostring(e)')
+case "$out" in *'mu.ranma | '*'nu.lua exists'*) ;; *) fail "add of several: $out" ;; esac
+until_lua 'return ranma.get("mu.n") == 13' "the one that could be added is installed"
+grep -q "the user's own" "$CFG/lua/plugins/nu.lua" || fail "add of several overwrote a spec file"
+ok "add: several at once, one refused and said, the rest installed"
+rm -f "$CFG/lua/plugins/mu.lua" "$CFG/lua/plugins/nu.lua"
+rm -rf "$ROOT/mu.ranma"
+"${ENVV[@]}" "RANMA_SOCKET=$RT/ranma/1.sock" ranma action reload_config
+until_lua 'return require("hako.state").by_name["mu.ranma"] == nil' "cleaned up mu"
+
 # 6. The screen.
 scr() { T capture-pane -p -t s; }
 wait_screen() { # pattern, what
@@ -275,6 +307,20 @@ wait_screen "✗ spec" "a spec hako refused is listed"
 wait_screen "Not in spec" "a stray has its section"
 scr | tail -1 | grep -q "✗ 2 failed" || fail "the bar module: $(scr | tail -1)"
 ok "the screen: sections, states, and the bar module"
+T send-keys -t s Space
+wait_screen "1 selected" "space selects on screen"
+sleep 0.5
+T send-keys -t s Space
+for _ in $(seq 1 20); do scr | grep -q "1 selected" || break; sleep 0.25; done
+scr | grep -q "1 selected" && fail "space did not unselect"
+sleep 0.5
+T send-keys -t s v
+wait_screen "1 selected" "v selects on screen"
+sleep 0.5
+T send-keys -t s v
+for _ in $(seq 1 20); do scr | grep -q "1 selected" || break; sleep 0.25; done
+scr | grep -q "1 selected" && fail "v did not unselect"
+ok "space/v: select and unselect plugins on the main screen"
 # SHOW=1 prints the screen as drawn, to hold up against the handoff's mock.
 if [ -n "${SHOW:-}" ]; then scr; fi
 T send-keys -t s a
@@ -322,10 +368,12 @@ ok "w: a repository's page, opened by the desktop's opener"
 # 7. Browse: plugins from lists. The official list is a local file here
 #    (HAKO_OFFICIAL_LIST), and so is the one added with a.
 repo zeta.ranma 'plugin/zeta.lua=ranma.option("zeta.n", { type = "int", default = 4 })'
+repo theta.ranma 'plugin/theta.lua=ranma.option("theta.n", { type = "int", default = 6 })'
 repo eta.ranma 'plugin/eta.lua=ranma.option("eta.n", { type = "int", default = 8 })'
 cat > "$WORK/official.json" <<JSON
 { "format": 1, "name": "ranma plugins", "plugins": [
   { "repo": "file://$SRC/zeta.ranma", "description": "Zeta: a plugin to install.", "author": "t", "tags": ["git", "bar"] },
+  { "repo": "file://$SRC/theta.ranma", "description": "Theta: another to install.", "author": "t", "tags": ["git"] },
   { "repo": "file://$SRC/plain.ranma", "description": "Plain: declared and installed.", "author": "t", "tags": ["bar"] },
   { "repo": "file://$SRC/far.ranma", "description": "Far: needs a ranma from the future.", "author": "t", "ranma": "9.0.0" }
 ] }
@@ -336,7 +384,7 @@ cat > "$WORK/third.json" <<JSON
 ] }
 JSON
 out=$(RL 'require("hako").browse()') || fail "browse: $out"
-wait_screen "browse · 3 plugins" "Browse opens and the official list lands"
+wait_screen "browse · 4 plugins" "Browse opens and the official list lands"
 wait_screen "Available" "an available plugin has its section"
 wait_screen "needs 9.0.0" "a plugin for a newer ranma says so"
 wait_screen "● installed" "a declared, installed plugin says so"
@@ -344,14 +392,21 @@ wait_screen "Lists" "the lists are under the plugins"
 if [ -n "${SHOW:-}" ]; then scr; fi
 ok "Browse: the official list's plugins, by what each is to you"
 T send-keys -t s / '#git'
-wait_screen "browse · 1 of 3" "a #tag filters"
+wait_screen "browse · 2 of 4" "a #tag filters"
 scr | grep -q "Lists" && fail "the lists stayed while a filter stands"
 ok "Browse: /#git keeps the tagged plugin, and the lists go"
-T send-keys -t s Enter i
-until_lua 'return ranma.get("zeta.n") == 4' "i installs from Browse"
+T send-keys -t s Enter
+T send-keys -t s Space
+wait_screen "1 selected" "space selects in Browse"
+T send-keys -t s j Space
+wait_screen "2 selected" "space selects a second plugin"
+wait_screen "install 2" "install key shows the selection count"
+T send-keys -t s i
+until_lua 'return ranma.get("zeta.n") == 4 and ranma.get("theta.n") == 6' "i installs multiple selected plugins from Browse"
 grep -q "from ranma plugins" "$CFG/lua/plugins/zeta.lua" || fail "the spec file does not say which list: $(cat "$CFG/lua/plugins/zeta.lua")"
+grep -q "from ranma plugins" "$CFG/lua/plugins/theta.lua" || fail "the spec file does not say which list: $(cat "$CFG/lua/plugins/theta.lua")"
 wait_screen "browse ·" "hako comes back to Browse after the reload"
-ok "i: the spec written (from its list), installed, back in Browse"
+ok "i: multiple selected plugins installed, specs written, back in Browse"
 T send-keys -t s a
 wait_screen "add list" "a asks for a list's URL"
 T send-keys -t s "file://$WORK/third.json" Enter
@@ -377,6 +432,7 @@ scr | grep -q "list failed" && fail "the removed list's failure stayed in the st
 grep -q third "$CFG/hako-lists.json" && fail "the removed list is still in hako-lists.json"
 ok "a removed list's plugins leave Browse"
 T send-keys -t s Escape
+T send-keys -t s PageDown
 wait_screen "B browses" "esc back to the installed view, which points at Browse"
 ok "esc: back to the installed view"
 

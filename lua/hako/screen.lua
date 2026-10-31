@@ -18,12 +18,36 @@ local screen       -- the open screen's handle, or nil
 local reason       -- why it opened by itself (the subtitle), or nil
 local frozen       -- while a run goes: id -> section, so rows hold still
 local marked = {}  -- ids an ask would delete: the `deletes` mark
+local selected = {} -- ids of selected rows
 local last_row     -- the row a key last acted on: the selection after a reload
+local refresh      -- forward declaration
 local refresh_due = false
 local sizes = {}   -- stray name -> { kb, age }, filled in the background
 local view = "installed" -- or "browse", while Browse is pushed over the list
 local ask_status   -- a standing ask's status, kept over background redraws
 local clears = false -- whether this ranma's s:set takes status = false
+
+local function toggle_select(id)
+  if selected[id] then selected[id] = nil else selected[id] = true end
+  refresh()
+end
+
+local function selected_count()
+  local c = 0
+  for _ in pairs(selected) do c = c + 1 end
+  return c
+end
+
+local function selected_names()
+  local out = {}
+  for id in pairs(selected) do out[#out + 1] = id end
+  table.sort(out)
+  return out
+end
+
+local function clear_selected()
+  selected = {}
+end
 
 -- A status to set: nil means "no status", which s:set reads as "unchanged"
 -- unless it is false (a ranma from before that keeps the old one instead).
@@ -277,9 +301,34 @@ local ask_remove, ask_clean, ask_delete_stray, show_log
 
 local function keys_for(p, st)
   local id = p.name
+  local n_sel = selected_count()
+  local inst_act = on(id, function()
+    if n_sel > 0 then
+      local names = selected_names()
+      clear_selected()
+      ops.install(names)
+    else
+      ops.install(p.name)
+    end
+  end)
+  local inst_all = on(id, function() clear_selected(); ops.install() end)
+  local inst_label = n_sel > 0 and ("install " .. n_sel) or "install"
+
+  local upd_act = on(id, function()
+    if n_sel > 0 then
+      local names = selected_names()
+      clear_selected()
+      ops.update(names)
+    else
+      ops.update(p.name)
+    end
+  end)
+  local upd_all = on(id, function() clear_selected(); ops.update() end)
+  local upd_label = n_sel > 0 and ("update " .. n_sel) or "update"
+
   local k = {
-    u = { "u", "update", on(id, function() ops.update(p.name) end), all = { "U", on(id, function() ops.update() end) } },
-    i = { "i", "install", on(id, function() ops.install(p.name) end), all = { "I", on(id, function() ops.install() end) } },
+    u = { "u", upd_label, upd_act, all = { "U", upd_all } },
+    i = { "i", inst_label, inst_act, all = { "I", inst_all } },
     r = { "r", "restore", on(id, function() ops.restore(p.name) end), all = { "R", on(id, function() ops.restore() end) } },
     x = { "x", "remove", on(id, function() ask_remove(p) end), all = { "X", on(id, function() ask_clean() end) } },
     l = { "l", "log", on(id, function() show_log() end) },
@@ -298,9 +347,16 @@ local function keys_for(p, st)
     return list
   end
   if state.tasks[p.name] then return with_web({ k.enter, k.l }) end
+  local function compact(list)
+    local out = {}
+    for _, item in ipairs(list) do
+      if item ~= nil then out[#out + 1] = item end
+    end
+    return out
+  end
   local by = {
-    loaded = { k.u, k.l, k.x },
-    update = { k.u, k.l, k.x },
+    loaded = compact { k.u, n_sel > 0 and k.i or nil, k.l, k.x },
+    update = compact { k.u, n_sel > 0 and k.i or nil, k.l, k.x },
     failload = { k.e, k.u, k.l },
     failtask = (function()
       local f = ops.failures()[p.name]
@@ -346,9 +402,13 @@ local function plugin_row(p)
   local st = state_of(p)
   local plain = PLAIN[st] and PLAIN[st](p) or { p.ms and string.format("● %.1fms", p.ms) or "●", "dim" }
   local mark
-  if marked[p.name] then
+  local added = store():get("added")
+  local is_added = (type(added) == "table" and added[p.name]) or added == p.name
+  if selected[p.name] then
+    mark = { "selected", "accent" }
+  elseif marked[p.name] then
     mark = { "deletes", "urgent" }
-  elseif store():get("added") == p.name and not p.installed then
+  elseif is_added and not p.installed then
     mark = { "new", "accent" }
   elseif not p.managed then
     mark = { "local", "dim" }
@@ -471,6 +531,7 @@ end
 local CARD = {
   { "u U", "update it · all" },
   { "i I", "install it · all missing" },
+  { "space", "select it · unselect" },
   { "r R", "restore it · all (the lock)" },
   { "x X", "remove it · clean (asks)" },
   { "C", "check all for updates" },
@@ -498,7 +559,7 @@ local function with_more(b)
   return b
 end
 
-local function refresh()
+function refresh()
   refresh_due = false
   if not screen then return end
   if view == "browse" then
@@ -509,7 +570,10 @@ local function refresh()
     return
   end
   local b, n = body()
-  screen:set { body = with_more(b), status = st(ask_status or status()), count = n .. (n == 1 and " plugin" or " plugins") }
+  local cnt = n .. (n == 1 and " plugin" or " plugins")
+  local n_sel = selected_count()
+  if n_sel > 0 then cnt = cnt .. " · " .. n_sel .. " selected" end
+  screen:set { body = with_more(b), status = st(ask_status or status()), count = cnt }
 end
 
 -- Something changed: redraw soon (many changes in a burst redraw once).
@@ -690,12 +754,10 @@ local function ask_add()
     input = { prefix = "+", text = "" },
     keys = {
       { "enter", "add", function(_, text)
-        local name, err = ops.add(text)
-        if not name then
-          refresh()
-          return ranma.toast("hako add: " .. err, { urgent = true })
-        end
-        last_row = name
+        local names, err = ops.add(text)
+        if err then ranma.toast("hako add: " .. err, { urgent = true }) end
+        if not names then return refresh() end
+        last_row = names[1]
         M.before_reload()
       end },
       { "esc", "cancel", done_asking },
@@ -768,7 +830,8 @@ end
 -- ---------------------------------------------------------------------------
 
 local BROWSE_CARD = {
-  { "i", "install it" },
+  { "i", "install it (or all selected)" },
+  { "space", "select it · unselect" },
   { "t", "turn a list off · on", "list" },
   { "x", "remove a list (asks)", "list" },
   { "a", "add a list: its URL" },
@@ -783,10 +846,66 @@ browse_ctx = {
   on = on,
   where = function(p) return (declared(p)) end,
   open_dir = function(path) open_dir(path) end,
+  toggle_select = function(name)
+    browse.toggle_select(name)
+    refresh()
+  end,
   install = function(e, p)
+    local n_sel = browse.selected_count()
+    if n_sel > 0 then
+      local names = browse.selected_names()
+      local ls = browse.lists()
+      local es = browse.entries(ls)
+      local by_name = {}
+      for _, it in ipairs(es) do by_name[it.name] = it end
+
+      local to_add = {}
+      local to_install = {}
+      local last_name = nil
+
+      for _, name in ipairs(names) do
+        local entry = by_name[name]
+        if entry then
+          local decl = browse.declared(entry)
+          if decl then
+            to_install[#to_install + 1] = decl.name
+          else
+            to_add[#to_add + 1] = { src = entry.repo, from = entry.from and entry.from[1] }
+          end
+          last_name = name
+        end
+      end
+
+      browse.clear_selected()
+
+      if #to_install > 0 then
+        for _, dname in ipairs(to_install) do
+          ops.set_pending(dname, true)
+        end
+      end
+
+      local added_any = false
+      if #to_add > 0 then
+        local added, err = ops.add(to_add)
+        if err then ranma.toast("hako: " .. err, { urgent = true }) end
+        if not added then return refresh() end
+        added_any = true
+      end
+
+      if last_name then last_row = last_name end
+
+      if added_any then
+        M.before_reload()
+      elseif #to_install > 0 then
+        ops.install(to_install)
+      end
+      refresh()
+      return
+    end
+
     if p then return ops.install(p.name) end
-    local name, err = ops.add(e.repo, e.from[1])
-    if not name then
+    local names, err = ops.add(e.repo, e.from[1])
+    if not names then
       refresh()
       return ranma.toast("hako: " .. err, { urgent = true })
     end
@@ -794,6 +913,7 @@ browse_ctx = {
     M.before_reload()
   end,
   back = function(sel)
+    browse.clear_selected()
     screen:pop()
     view = "installed"
     refresh()
@@ -895,6 +1015,8 @@ function M.browse(sel)
   local t = {
     count = count, status = (state.run and status()) or lst, body = b, card = BROWSE_CARD,
     keys = {
+      { "space", "select", function(id) if id and not id:find("^list:") then browse_ctx.toggle_select(id) end end,
+        all = { "v", function(id) if id and not id:find("^list:") then browse_ctx.toggle_select(id) end end } },
       { "a", "add list", function() ask_add_list() end },
       { "C", "fetch", function() fetch_all() end },
       { "B", "installed view", function() browse_ctx.back() end },
@@ -905,6 +1027,7 @@ function M.browse(sel)
       refresh()
     end,
     on_back = function()
+      browse.clear_selected()
       view = "installed"
       refresh()
     end,
@@ -940,6 +1063,8 @@ function M.open(opts)
     count = n .. (n == 1 and " plugin" or " plugins"),
     status = status(),
     keys = {
+      { "space", "select", function(id) if id and state.by_name[id] then toggle_select(id) end end,
+        all = { "v", function(id) if id and state.by_name[id] then toggle_select(id) end end } },
       { "S", "sync", function() sync_ask() end },
       { "a", "add", function() ask_add() end },
       { "C", "check", function() ops.check() end },
@@ -949,8 +1074,9 @@ function M.open(opts)
     body = b,
     empty = "no plugins: declare some in require(\"hako\").setup",
     on_close = function()
-      screen, reason, marked, view, ask_status = nil, nil, {}, "installed", nil
+      screen, reason, marked, view, ask_status, selected = nil, nil, {}, "installed", nil, {}
       browse.unmark()
+      browse.clear_selected()
     end,
   }
   clears = pcall(screen.set, screen, { status = status() or false })
@@ -1037,8 +1163,17 @@ end
 -- The added plugin is no longer new once it is installed.
 function M.forget_added()
   local added = store():get("added")
-  local p = added and state.by_name[added]
-  if p and p.installed then store():set("added", nil) end
+  if not added then return end
+  if type(added) == "table" then
+    for name in pairs(added) do
+      local p = state.by_name[name]
+      if p and p.installed then added[name] = nil end
+    end
+    if next(added) == nil then store():set("added", nil) else store():set("added", added) end
+  else
+    local p = state.by_name[added]
+    if p and p.installed then store():set("added", nil) end
+  end
 end
 
 return M

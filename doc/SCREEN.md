@@ -42,8 +42,9 @@ moment something fails.
 
 | Key | Does | On |
 | --- | --- | --- |
-| `u` / `U` | update it / all: fetch, fast-forward, build, lock | loaded, updates, failed, off |
-| `i` / `I` | install it / all that are missing | not installed, a failed clone |
+| `space` / `v` | select or unselect a row (marks `selected`, shows count in header) | any plugin row |
+| `u` / `U` | update it (or all selected) / all: fetch, fast-forward, build, lock | loaded, updates, failed, off |
+| `i` / `I` | install it (or all selected) / all that are missing | not installed, a failed clone (or loaded/available when selected) |
 | `r` / `R` | restore it / all to the lockfile | pinned, off the lock |
 | `x` / `X` | remove it / clean every stray (both ask) | most rows |
 | `C` | check every plugin for updates | the screen |
@@ -90,7 +91,8 @@ sections stay. A plugin from a list that is not the official one is marked
 
 | Key | Does | On |
 | --- | --- | --- |
-| `i` | install it | an available or not-installed plugin |
+| `space` / `v` | select or unselect plugins (marks `selected`, shows count) | available or not-installed plugins |
+| `i` | install it (or all selected plugins) | an available or not-installed plugin |
 | `t` | turn a list off · on | a list |
 | `x` | remove a list (asks; not the official one) | a list |
 | `a` | add a list: its URL, fetched and shown, then a warning only `y` answers | Browse |
@@ -98,8 +100,9 @@ sections stay. A plugin from a list that is not the official one is marked
 | `B` | the installed view | Browse, an installed plugin |
 | `/` | filter: words (name, description, author) and `#tag` | Browse |
 
-Installing writes the spec file, ranma reloads, and hako opens again in
-Browse on that row, where the clone runs as a meter.
+Installing writes the spec file(s), ranma reloads, and hako opens again in
+Browse on that row, where the clone runs as a meter. When multiple plugins are
+selected, all of their specs are added together and cloned.
 
 ## Where it departs from the handoff
 

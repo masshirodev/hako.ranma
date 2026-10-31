@@ -22,8 +22,10 @@ local function run(arg)
   if cmd == "remove" then return screen.remove(name) end
   if cmd == "add" then
     local added, err = ops.add(rest)
-    if not added then return ranma.toast("hako add: " .. err, { urgent = true }) end
-    return ranma.notify("hako: added " .. added .. "; ranma reloads and installs it")
+    if err then ranma.toast("hako add: " .. err, { urgent = true }) end
+    if not added then return end
+    local them = #added == 1 and "it" or "them"
+    return ranma.notify("hako: added " .. table.concat(added, ", ") .. "; ranma reloads and installs " .. them)
   end
   ranma.toast("hako: " .. table.concat(COMMANDS, ", "))
 end
@@ -33,7 +35,7 @@ end
 function M.install(opts)
   ranma.command("hako", run, {
     desc = "plugins: the list, or install, update, check, sync, clean, restore, log, add, remove",
-    args = "[command] [plugin]",
+    args = "[command] [plugin...]",
     complete = function()
       local out = {}
       for _, c in ipairs(COMMANDS) do out[#out + 1] = c end

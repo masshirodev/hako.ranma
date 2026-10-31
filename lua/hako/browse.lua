@@ -12,6 +12,7 @@ local SECTIONS = { "Not installed", "Available", "Needs a newer ranma", "Install
 
 local query = ""   -- what / holds in Browse
 local marked = {}  -- list urls an ask would delete: the `deletes` mark
+local selected = {} -- plugin names selected for install
 local fetching = 0 -- lists being fetched in this run, for the status
 
 -- ---------------------------------------------------------------------------
@@ -164,9 +165,16 @@ end
 local function plugin_row(ctx, e)
   local p = M.declared(e)
   local st = M.state_of(e, p)
+  local is_sel = M.is_selected(e.name)
+  local n_sel = M.selected_count()
   local row = { "row", id = e.name, name = e.name, note = e.description }
-  if not e.official then row.mark = { "unreviewed", "accent" } end
-  local install = { "i", "install", ctx.on(e.name, function() ctx.install(e, p) end) }
+  if is_sel then
+    row.mark = { "selected", "accent" }
+  elseif not e.official then
+    row.mark = { "unreviewed", "accent" }
+  end
+  local inst_label = n_sel > 0 and ("install " .. n_sel) or "install"
+  local install = { "i", inst_label, ctx.on(e.name, function() ctx.install(e, p) end) }
   local section
   if st == "avail" then
     section = "Available"
@@ -353,6 +361,10 @@ function M.view(ctx)
   else
     count = "browse · " .. #es .. (#es == 1 and " plugin" or " plugins")
   end
+  local n_sel = M.selected_count()
+  if n_sel > 0 then
+    count = count .. " · " .. n_sel .. " selected"
+  end
 
   local status
   local failed = 0
@@ -373,6 +385,43 @@ end
 
 function M.query(q)
   query = q or ""
+end
+
+function M.toggle_select(name)
+  if not name or name:find("^list:") then return end
+  local ls = M.lists()
+  local es = M.entries(ls)
+  for _, e in ipairs(es) do
+    if e.name == name then
+      local p = M.declared(e)
+      local st = M.state_of(e, p)
+      if st == "avail" or st == "decl" then
+        if selected[name] then selected[name] = nil else selected[name] = true end
+      end
+      return
+    end
+  end
+end
+
+function M.is_selected(name)
+  return selected[name] == true
+end
+
+function M.selected_count()
+  local c = 0
+  for _ in pairs(selected) do c = c + 1 end
+  return c
+end
+
+function M.selected_names()
+  local out = {}
+  for name in pairs(selected) do out[#out + 1] = name end
+  table.sort(out)
+  return out
+end
+
+function M.clear_selected()
+  selected = {}
 end
 
 function M.mark(url, on)

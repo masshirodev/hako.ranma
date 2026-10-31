@@ -134,7 +134,7 @@ whole (ranma's own rule for plugins), and hako lists the error.
 **The screen**: `leader L` (or `hako` in the palette, or a click on the bar
 module) opens every plugin in sections by what needs you (Failed, Updates,
 Not installed, Installed, Not in spec, Not managed), with every operation on a
-key: `u/U` update, `i/I` install, `r/R` restore, `x/X` remove and clean, `C`
+key: `space` (or `v`) selects or unselects rows (showing `<N> selected`), `u/U` update (or update all selected), `i/I` install (or install all selected), `r/R` restore, `x/X` remove and clean, `C`
 check, `S` sync, `a` add, `l` the log, `e` the error's file, `o` the plugin's
 options, `w` its repository's page in the browser. Nothing is deleted on one key: `x`, `X` and a cleaning `S` ask, and
 only `y` answers. `doc/SCREEN.md` is the account.
@@ -144,18 +144,18 @@ The palette (leader `:`) has `hako` too:
 | | |
 | --- | --- |
 | `hako` | The screen. |
-| `hako install [name]` | Clone what is declared and missing (or that one). By itself only with `hako.install_missing`. |
-| `hako update [name]` | Fetch, fast-forward, run `build`, lock where each landed, reload. ranma reloads as soon as one lands; the next load goes on with the rest. A plugin whose upstream history was rewritten (no fast-forward reaches it) is moved to upstream (`✓ rewritten`), unless its files were edited in the clone. |
-| `hako check [name]` | Fetch and count the new commits, changing nothing. Also every few hours on its own. |
+| `hako install [name...]` | Clone what is declared and missing (or one or more space-separated names). By itself only with `hako.install_missing`. |
+| `hako update [name...]` | Fetch, fast-forward, run `build`, lock where each landed, reload. ranma reloads as soon as one lands; the next load goes on with the rest. A plugin whose upstream history was rewritten (no fast-forward reaches it) is moved to upstream (`✓ rewritten`), unless its files were edited in the clone. |
+| `hako check [name...]` | Fetch and count the new commits, changing nothing. Also every few hours on its own. |
 | `hako sync` | Install and update; asks first if it would clean. |
-| `hako restore [name]` | Back to the lockfile's commits. |
+| `hako restore [name...]` | Back to the lockfile's commits. |
 | `hako clean` | Delete clones no spec declares (asks first). |
-| `hako add owner/repo` | Write `lua/plugins/<name>.lua` with the spec; the save reloads ranma, which installs it. |
+| `hako add [repo...]` | Write `lua/plugins/<name>.lua` with the spec; the save reloads ranma, which installs it. Accepts multiple repos separated by space. |
 | `hako remove name` | For a plugin declared in a file of its own: delete the file and the clone (it asks first). Declared anywhere else, it says where. |
 | `hako log name` | The commits an update would bring, or the latest ones. |
 
 From Lua (a bind, `ranma lua`): `require("hako").open()`, `.browse()`, `.update()`,
-`.check()`, `.install()`, `.restore()`, and `.sync()`, `.clean()`, `.log()`
+`.check()`, `.install()`, `.restore()` (which accept a single name, a space-separated string, or a list/table of names), and `.sync()`, `.clean()`, `.log()`
 (which open the screen to ask or show).
 
 **The bar.** A module named `hako`, placed like any other
@@ -171,9 +171,10 @@ updates: history, compose and marks. leader L shows them; checked 16:30`.
 
 `B` on the screen (or `require("hako").browse()`) shows the plugins of every
 plugin list you have on: what is not installed yet, what is available, what
-needs a newer ranma, what you have, and the lists themselves. `i` installs
-the selected plugin (a spec file in `lua/plugins/`, as `a` writes, saying
-which list it came from), `/` filters by words (name, description, author) or
+needs a newer ranma, what you have, and the lists themselves. `space` (or `v`)
+selects or unselects plugins; `i` installs the selected plugin or all selected
+plugins at once (spec files in `lua/plugins/`, as `a` writes, saying
+which list each came from), `/` filters by words (name, description, author) or
 `#tag`, `C` fetches every list again, `esc` or `B` goes back.
 
 A **plugin list** is one JSON file at a URL. The official one is

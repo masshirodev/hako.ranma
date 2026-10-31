@@ -211,3 +211,29 @@ handoff (`doc/SCREEN.md`, "Browse"); `doc/LISTS.md` is the format.
 - **The words are plain English** ("Browse", "plugin lists"): `hako` and
   `ranma` are names, but a word you have to read to understand what something
   does should not need a dictionary.
+
+## Selection and batch operations
+
+Installing and updating several plugins at once is supported from Lua, the palette,
+and the screen:
+
+- **Lua and the palette**: `ops.install`, `ops.update`, `ops.check`, `ops.restore`
+  and `ops.add` accept a single name, a space-separated string (`"alpha beta"`),
+  or a table of names.
+  Adding several where some cannot be added (a spec file already there, say)
+  adds the rest and still says why the others were not: `ops.add` returns the
+  names it wrote and the errors, and every caller toasts the errors. One bad
+  name never hides the others, nor is hidden by them.
+- **Selection on the screen**: `space` (and `v` as alias) toggles selection on the
+  highlighted row, marking it `selected` and updating the count (`N selected`).
+  When rows are selected, `i` becomes `install <N>` and `u` becomes `update <N>`,
+  acting on all selected plugins and clearing the selection.
+- **Screen-level key binding**: ranma's screen loop intercepts `space` for
+  pane peeking whenever `!self.binds_space()` (which checks only screen-level
+  `self.keys`, not row-level keys). Binding `space` paired with `v` at the screen
+  level ensures ranma delivers space to the plugin while displaying `space/v select`
+  cleanly in the footer.
+- **Batch install from Browse**: In Browse, selecting plugins across lists and
+  pressing `i` separates them into declared missing plugins (queued for install)
+  and undeclared available plugins (added via batch `ops.add`), writing their specs
+  and cloning them before triggering a single reload.
